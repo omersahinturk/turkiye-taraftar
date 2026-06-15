@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎤 Yönetici Paneli</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --kirmizi: #CC0000; --kirmizi-koyu: #990000; --kirmizi-soluk: #FFF0F0;
+    --yesil: #1a7a1a; --yesil-acik: #F0FFF0;
+    --turuncu: #D4A017; --turuncu-acik: #FFF8E7;
+    --mavi: #185FA5; --mavi-acik: #E6F1FB;
+    --beyaz: #FFFFFF; --gri-100: #F5F5F5; --gri-200: #E8E8E8;
+    --gri-400: #999; --gri-700: #444;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+  html, body { min-height: 100vh; font-family: var(--font); background: var(--gri-100); color: var(--gri-700); }
+
+  /* GİRİŞ EKRANI */
+  .giris-ekran { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+  .giris-kart { background: var(--beyaz); border-radius: 20px; padding: 2.5rem 2rem; width: 100%; max-width: 380px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); text-align: center; display: flex; flex-direction: column; gap: 1.25rem; align-items: center; }
+  .giris-ikon { font-size: 52px; }
+  .giris-baslik { font-size: 22px; font-weight: 700; color: var(--kirmizi); }
+  .giris-alt { font-size: 13px; color: var(--gri-400); }
+  .sifre-input { padding: 14px 18px; border: 2px solid var(--gri-200); border-radius: 12px; font-size: 18px; text-align: center; letter-spacing: 0.15em; width: 100%; max-width: 280px; font-family: var(--font); transition: border-color 0.15s; }
+  .sifre-input:focus { outline: none; border-color: var(--kirmizi); }
+  .sifre-input.yanlis { border-color: #e53e3e; animation: salla 0.3s ease; }
+  @keyframes salla { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+  .giris-btn { padding: 14px; background: var(--kirmizi); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; max-width: 280px; }
+  .giris-btn:active { background: var(--kirmizi-koyu); }
+  .hata-yazi { font-size: 13px; color: #e53e3e; font-weight: 600; min-height: 18px; }
+
+  /* ANA PANEL */
+  .panel { display: none; flex-direction: column; min-height: 100vh; }
+  .panel.aktif { display: flex; }
+
+  .panel-header { background: var(--kirmizi); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .panel-header-sol { display: flex; align-items: center; gap: 12px; }
+  .panel-baslik { color: white; font-size: 18px; font-weight: 700; }
+  .panel-alt { color: rgba(255,255,255,0.75); font-size: 12px; }
+  .cikis-btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 6px 14px; font-size: 13px; cursor: pointer; }
+
+  .panel-icerik { padding: 1.5rem; max-width: 800px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 1.5rem; }
+
+  /* İSTATİSTİK KARTLARI */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .stat-kart { background: var(--beyaz); border-radius: 14px; padding: 1.25rem; border: 1px solid var(--gri-200); }
+  .stat-sayi { font-size: 32px; font-weight: 700; color: var(--kirmizi); }
+  .stat-label { font-size: 13px; color: var(--gri-400); margin-top: 4px; }
+
+  /* BÖLGE DAĞILIMI */
+  .bolge-dagilim { background: var(--beyaz); border-radius: 14px; padding: 1.25rem; border: 1px solid var(--gri-200); }
+  .bolge-satir { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gri-100); }
+  .bolge-satir:last-child { border-bottom: none; }
+  .bolge-satir-sol { display: flex; align-items: center; gap: 10px; }
+  .bolge-ikon { font-size: 20px; }
+  .bolge-isim { font-size: 14px; font-weight: 600; }
+  .bolge-chip { background: var(--kirmizi-soluk); color: var(--kirmizi); font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
+
+  /* BÖLÜM BAŞLIĞI */
+  .bolum-baslik { font-size: 13px; font-weight: 700; color: var(--gri-400); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* AMİGO KARTLARI */
+  .amigo-liste { display: flex; flex-direction: column; gap: 8px; }
+  .amigo-kart { background: var(--beyaz); border-radius: 14px; padding: 1rem 1.25rem; border: 2px solid var(--gri-200); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .amigo-kart.bekliyor { border-color: var(--turuncu); background: var(--turuncu-acik); }
+  .amigo-kart.onaylandi { border-color: var(--yesil); background: var(--yesil-acik); }
+  .amigo-kart.reddedildi { border-color: #e53e3e; background: #FFF5F5; opacity: 0.7; }
+  .amigo-isim { font-size: 16px; font-weight: 700; }
+  .amigo-zaman { font-size: 12px; color: var(--gri-400); margin-top: 2px; }
+  .amigo-durum-chip { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+  .amigo-durum-chip.bekliyor { background: var(--turuncu); color: white; }
+  .amigo-durum-chip.onaylandi { background: var(--yesil); color: white; }
+  .amigo-durum-chip.reddedildi { background: #e53e3e; color: white; }
+  .amigo-butonlar { display: flex; gap: 8px; }
+  .onayla-btn { padding: 8px 16px; background: var(--yesil); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .reddet-btn { padding: 8px 16px; background: #e53e3e; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .kaldir-btn { padding: 8px 16px; background: var(--gri-200); color: var(--gri-700); border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+  /* TARAFTAR LİSTESİ */
+  .taraftar-liste { display: flex; flex-direction: column; gap: 8px; }
+  .taraftar-kart { background: var(--beyaz); border-radius: 12px; padding: 12px 16px; border: 1px solid var(--gri-200); display: flex; align-items: center; justify-content: space-between; }
+  .taraftar-isim { font-size: 15px; font-weight: 600; }
+  .taraftar-bolge { font-size: 12px; color: var(--gri-400); margin-top: 2px; }
+  .taraftar-zaman { font-size: 11px; color: var(--gri-400); }
+
+  .bos-yazi { text-align: center; color: var(--gri-400); font-size: 14px; padding: 2rem; }
+
+  .durum-bar { background: var(--gri-100); border-top: 1px solid var(--gri-200); padding: 8px 20px; font-size: 12px; color: var(--gri-400); display: flex; align-items: center; gap: 6px; margin-top: auto; }
+  .durum-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--yesil); display: inline-block; }
+  .durum-dot.bekle { background: var(--turuncu); animation: yanip 1s ease-in-out infinite; }
+  @keyframes yanip { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- GİRİŞ EKRANI -->
+<div class="giris-ekran" id="giris-ekran">
+  <div class="giris-kart">
+    <div class="giris-ikon">🛡️</div>
+    <div class="giris-baslik">Yönetici Paneli</div>
+    <div class="giris-alt">Yönetici şifresini gir</div>
+    <input class="sifre-input" id="admin-sifre" type="password" placeholder="••••••" maxlength="30"
+           onkeydown="if(event.key==='Enter') adminGiris()">
+    <div class="hata-yazi" id="admin-hata"></div>
+    <button class="giris-btn" onclick="adminGiris()">Giriş Yap →</button>
+  </div>
+</div>
+
+<!-- ANA PANEL -->
+<div class="panel" id="ana-panel">
+  <div class="panel-header">
+    <div class="panel-header-sol">
+      <div>
+        <div class="panel-baslik">🛡️ Yönetici Paneli</div>
+        <div class="panel-alt">Türkiye vs Paraguay · World Cup 2026</div>
+      </div>
+    </div>
+    <button class="cikis-btn" onclick="cikisYap()">Çıkış</button>
+  </div>
+
+  <div class="panel-icerik">
+
+    <!-- İSTATİSTİKLER -->
+    <div class="stat-grid">
+      <div class="stat-kart">
+        <div class="stat-sayi" id="stat-taraftar">0</div>
+        <div class="stat-label">Aktif Taraftar</div>
+      </div>
+      <div class="stat-kart">
+        <div class="stat-sayi" id="stat-amigo-onay">0</div>
+        <div class="stat-label">Onaylı Amigo</div>
+      </div>
+      <div class="stat-kart">
+        <div class="stat-sayi" id="stat-amigo-bekle">0</div>
+        <div class="stat-label">Onay Bekleyen</div>
+      </div>
+    </div>
+
+    <!-- BÖLGE DAĞILIMI -->
+    <div class="bolum-baslik">Bölge Dağılımı</div>
+    <div class="bolge-dagilim" id="bolge-dagilim"></div>
+
+    <!-- ONAY BEKLEYEN AMİGOLAR -->
+    <div class="bolum-baslik">⏳ Onay Bekleyen Amigolar</div>
+    <div class="amigo-liste" id="bekleyen-amigolar">
+      <div class="bos-yazi">Bekleyen amigo yok</div>
+    </div>
+
+    <!-- ONAYLANMIŞ AMİGOLAR -->
+    <div class="bolum-baslik">✅ Onaylı Amigolar</div>
+    <div class="amigo-liste" id="onayli-amigolar">
+      <div class="bos-yazi">Henüz onaylı amigo yok</div>
+    </div>
+
+    <!-- TARAFTAR LİSTESİ -->
+    <div class="bolum-baslik">👥 Katılımcılar</div>
+    <div class="taraftar-liste" id="taraftar-liste">
+      <div class="bos-yazi">Henüz katılımcı yok</div>
+    </div>
+
+  </div>
+
+  <div class="durum-bar">
+    <span class="durum-dot" id="durum-dot"></span>
+    <span id="durum-yazi">Bağlanıyor...</span>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDv2mXYcHR49q_rzVj0vweql3Cy5B6wtwo",
+  authDomain: "turkiye-taraftar.firebaseapp.com",
+  databaseURL: "https://turkiye-taraftar-default-rtdb.firebaseio.com",
+  projectId: "turkiye-taraftar",
+  storageBucket: "turkiye-taraftar.firebasestorage.app",
+  messagingSenderId: "72821067356",
+  appId: "1:72821067356:web:d6ff23c827f292c89ca099"
+};
+
+const BOLGELER = [
+  { id: 'sol-kale', isim: 'Sol Kale Arkası', ikon: '🥅' },
+  { id: 'sol-orta', isim: 'Sol Orta Tribün', ikon: '⬅️' },
+  { id: 'sag-orta', isim: 'Sağ Orta Tribün', ikon: '➡️' },
+  { id: 'sag-kale', isim: 'Sağ Kale Arkası', ikon: '🥅' },
+];
+
+// Yönetici şifresi — Firebase'den çekilir
+let db = null;
+let girisYapildi = false;
+
+firebase.initializeApp(firebaseConfig);
+db = firebase.database();
+
+db.ref('.info/connected').on('value', snap => {
+  const dot = document.getElementById('durum-dot');
+  const yazi = document.getElementById('durum-yazi');
+  if (snap.val()) {
+    dot.className = 'durum-dot';
+    yazi.textContent = 'Bağlı';
+  } else {
+    dot.className = 'durum-dot bekle';
+    yazi.textContent = 'Bağlanıyor...';
+  }
+});
+
+// ===== GİRİŞ =====
+function adminGiris() {
+  const girilen = document.getElementById('admin-sifre').value;
+  const hata = document.getElementById('admin-hata');
+  const input = document.getElementById('admin-sifre');
+
+  db.ref('config/admin_sifre').get().then(snap => {
+    const dogru = snap.val();
+    if (girilen === dogru) {
+      girisYapildi = true;
+      document.getElementById('giris-ekran').classList.add('hidden');
+      document.getElementById('ana-panel').classList.add('aktif');
+      panelBaslat();
+    } else {
+      input.classList.add('yanlis');
+      hata.textContent = 'Yanlış şifre!';
+      setTimeout(() => input.classList.remove('yanlis'), 400);
+      input.value = '';
+    }
+  }).catch(() => { hata.textContent = 'Bağlantı hatası!'; });
+}
+
+function cikisYap() {
+  girisYapildi = false;
+  document.getElementById('ana-panel').classList.remove('aktif');
+  document.getElementById('giris-ekran').classList.remove('hidden');
+  document.getElementById('admin-sifre').value = '';
+}
+
+// ===== VERİ DİNLE =====
+function panelBaslat() {
+  // Amigolar
+  db.ref('amigolar').on('value', snap => {
+    const veri = snap.val() || {};
+    const amigolar = Object.entries(veri).map(([key, val]) => ({ key, ...val }));
+
+    const bekleyenler = amigolar.filter(a => a.durum === 'bekliyor');
+    const onaylilar = amigolar.filter(a => a.durum === 'onaylandi');
+
+    document.getElementById('stat-amigo-onay').textContent = onaylilar.length;
+    document.getElementById('stat-amigo-bekle').textContent = bekleyenler.length;
+
+    renderBekleyenAmigolar(bekleyenler);
+    renderOnayliAmigolar(onaylilar);
+  });
+
+  // Katılımcılar
+  db.ref('katilimcilar').on('value', snap => {
+    const veri = snap.val() || {};
+    const katilimcilar = Object.entries(veri).map(([key, val]) => ({ key, ...val }));
+    document.getElementById('stat-taraftar').textContent = katilimcilar.length;
+    renderBolgeDagilim(katilimcilar);
+    renderTaraftarlar(katilimcilar);
+  });
+}
+
+function saatFormatla(isoStr) {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  } catch { return ''; }
+}
+
+// ===== AMİGO RENDER =====
+function renderBekleyenAmigolar(liste) {
+  const el = document.getElementById('bekleyen-amigolar');
+  if (!liste.length) { el.innerHTML = '<div class="bos-yazi">Bekleyen amigo yok ✓</div>'; return; }
+  el.innerHTML = liste.map(a => `
+    <div class="amigo-kart bekliyor">
+      <div>
+        <div class="amigo-isim">${a.isim}</div>
+        <div class="amigo-zaman">${saatFormatla(a.girisSaati)}</div>
+      </div>
+      <div class="amigo-butonlar">
+        <button class="onayla-btn" onclick="amigoOnayla('${a.key}')">✅ Onayla</button>
+        <button class="reddet-btn" onclick="amigoReddet('${a.key}')">❌ Reddet</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderOnayliAmigolar(liste) {
+  const el = document.getElementById('onayli-amigolar');
+  if (!liste.length) { el.innerHTML = '<div class="bos-yazi">Henüz onaylı amigo yok</div>'; return; }
+  el.innerHTML = liste.map(a => `
+    <div class="amigo-kart onaylandi">
+      <div>
+        <div class="amigo-isim">${a.isim}</div>
+        <div class="amigo-zaman">${saatFormatla(a.girisSaati)}</div>
+      </div>
+      <div class="amigo-butonlar">
+        <span class="amigo-durum-chip onaylandi">✓ Onaylı</span>
+        <button class="kaldir-btn" onclick="amigoKaldir('${a.key}')">Kaldır</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function amigoOnayla(key) {
+  db.ref('amigolar/' + key + '/durum').set('onaylandi');
+}
+
+function amigoReddet(key) {
+  db.ref('amigolar/' + key + '/durum').set('reddedildi');
+}
+
+function amigoKaldir(key) {
+  if (!confirm('Bu amigoyu kaldırmak istiyor musun?')) return;
+  db.ref('amigolar/' + key).remove();
+}
+
+// ===== BÖLGE DAĞILIMI =====
+function renderBolgeDagilim(katilimcilar) {
+  const el = document.getElementById('bolge-dagilim');
+  const sayilar = {};
+  BOLGELER.forEach(b => sayilar[b.id] = 0);
+  katilimcilar.forEach(k => { if (k.bolge && sayilar[k.bolge] !== undefined) sayilar[k.bolge]++; });
+  el.innerHTML = BOLGELER.map(b => `
+    <div class="bolge-satir">
+      <div class="bolge-satir-sol">
+        <span class="bolge-ikon">${b.ikon}</span>
+        <span class="bolge-isim">${b.isim}</span>
+      </div>
+      <span class="bolge-chip">${sayilar[b.id]} kişi</span>
+    </div>
+  `).join('');
+}
+
+// ===== TARAFTAR LİSTESİ =====
+function renderTaraftarlar(liste) {
+  const el = document.getElementById('taraftar-liste');
+  if (!liste.length) { el.innerHTML = '<div class="bos-yazi">Henüz katılımcı yok</div>'; return; }
+  const sirali = [...liste].sort((a, b) => new Date(b.girisSaati) - new Date(a.girisSaati));
+  el.innerHTML = sirali.map(t => `
+    <div class="taraftar-kart">
+      <div>
+        <div class="taraftar-isim">${t.isim}</div>
+        <div class="taraftar-bolge">${t.bolgeIsim || t.bolge || ''}</div>
+      </div>
+      <div class="taraftar-zaman">${saatFormatla(t.girisSaati)}</div>
+    </div>
+  `).join('');
+}
+</script>
+</body>
+</html>
