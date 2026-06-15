@@ -6,6 +6,7 @@
 <title>🇹🇷 Türkiye Taraftar Koordinasyon</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -382,6 +383,9 @@ const BESTELER_VARSAYILAN = [{
 let state = {
   mod: 'hosgeldin',
   db: null,
+  auth: null,
+  uid: null,
+  aboneOlundu: false,
   bagliMi: false,
   kullaniciIsim: null,
   kullaniciRol: null,       // 'taraftar' | 'amigo'
@@ -398,40 +402,60 @@ let state = {
 // ===== FİREBASE BAŞLAT =====
 firebase.initializeApp(firebaseConfig);
 state.db = firebase.database();
+state.auth = firebase.auth();
 
-state.db.ref('.info/connected').on('value', snap => {
-  if (snap.val()) {
-    durumGuncelle('bagli', 'Bağlı');
-    state.bagliMi = true;
-  } else {
-    durumGuncelle('bekle', 'Bağlanıyor...');
-    state.bagliMi = false;
+// Güvenlik kuralları auth gerektirir → önce anonim giriş yap
+durumGuncelle('bekle', 'Bağlanıyor...');
+state.auth.signInAnonymously().catch(e => {
+  durumGuncelle('bekle', 'Giriş hatası');
+  console.error('Anonim giriş başarısız:', e);
+});
+
+state.auth.onAuthStateChanged(user => {
+  if (!user) return;
+  state.uid = user.uid;
+  if (!state.aboneOlundu) {
+    state.aboneOlundu = true;
+    abonelikleriBaslat();
   }
 });
 
-// Canlı yayın dinle
-state.db.ref('canli').on('value', snap => {
-  const veri = snap.val();
-  if (!veri) return;
-  if (state.mod === 'taraftar') {
-    state.caliyor = veri.caliyor || false;
-    state.aktifBeste = veri.aktifBeste || null;
-    state.aktifBolgeIdx = veri.aktifBolgeIdx !== undefined ? veri.aktifBolgeIdx : -1;
-    state.siralamaBolgeIdx = veri.siralamaBolgeIdx || [0,1,2,3];
-    if (veri.besteler) state.besteler = veri.besteler;
-    taraftarEkraniGuncelle();
-    siraBarGuncelle();
-  }
-});
+// Auth tamamlandıktan sonra DB aboneliklerini başlat
+function abonelikleriBaslat() {
+  state.db.ref('.info/connected').on('value', snap => {
+    if (snap.val()) {
+      durumGuncelle('bagli', 'Bağlı');
+      state.bagliMi = true;
+    } else {
+      durumGuncelle('bekle', 'Bağlanıyor...');
+      state.bagliMi = false;
+    }
+  });
 
-// Besteler dinle
-state.db.ref('besteler').on('value', snap => {
-  const veri = snap.val();
-  if (veri && Array.isArray(veri)) {
-    state.besteler = veri;
-    if (state.mod === 'amigo') amigoEkraniGuncelle();
-  }
-});
+  // Canlı yayın dinle
+  state.db.ref('canli').on('value', snap => {
+    const veri = snap.val();
+    if (!veri) return;
+    if (state.mod === 'taraftar') {
+      state.caliyor = veri.caliyor || false;
+      state.aktifBeste = veri.aktifBeste || null;
+      state.aktifBolgeIdx = veri.aktifBolgeIdx !== undefined ? veri.aktifBolgeIdx : -1;
+      state.siralamaBolgeIdx = veri.siralamaBolgeIdx || [0,1,2,3];
+      if (veri.besteler) state.besteler = veri.besteler;
+      taraftarEkraniGuncelle();
+      siraBarGuncelle();
+    }
+  });
+
+  // Besteler dinle
+  state.db.ref('besteler').on('value', snap => {
+    const veri = snap.val();
+    if (veri && Array.isArray(veri)) {
+      state.besteler = veri;
+      if (state.mod === 'amigo') amigoEkraniGuncelle();
+    }
+  });
+}
 
 // ===== NAVİGASYON =====
 const TUM_EKRANLAR = ['hosgeldin','taraftar-isim','bolge-sec','taraftar','amigo-isim','amigo-sifre','onay-bekle','amigo','qr'];
@@ -497,9 +521,9 @@ function bolgeKartSec(id) {
 
 function bolgeSecimOnayla() {
   if (!state.taraftarBolge) return;
-  // Firebase'e kaydet
-  const key = state.kullaniciIsim.replace(/[.#$\[\]]/g, '_') + '_' + Date.now();
-  state.db.ref('katilimcilar/' + key).set({
+  if (!state.uid) { alert('Bağlantı henüz hazır değil, biraz bekle.'); return; }
+  // Firebase'e kaydet — anahtar uid (bir cihaz = bir kayıt)
+  state.db.ref('katilimcilar/' + state.uid).set({
     isim: state.kullaniciIsim,
     bolge: state.taraftarBolge,
     bolgeIsim: BOLGELER.find(b => b.id === state.taraftarBolge)?.isim,
@@ -554,25 +578,25 @@ function sifreKontrol() {
   const girilen = document.getElementById('sifre-input').value;
   const hata = document.getElementById('sifre-hata');
   const input = document.getElementById('sifre-input');
-  if (!state.db) { hata.textContent = 'Bağlantı yok!'; return; }
-  state.db.ref('config/amigo_sifre').get().then(snap => {
-    if (girilen === snap.val()) {
-      // Şifre doğru → Firebase'e kaydet, onay bekle
-      const key = state.kullaniciIsim.replace(/[.#$\[\]]/g, '_') + '_' + Date.now();
-      state.amigoFirebaseKey = key;
-      state.db.ref('amigolar/' + key).set({
-        isim: state.kullaniciIsim,
-        durum: 'bekliyor',
-        girisSaati: new Date().toISOString()
-      });
-      gidOnayBekle(key);
-    } else {
-      input.classList.add('yanlis');
-      hata.textContent = 'Yanlış şifre, tekrar dene!';
-      setTimeout(() => input.classList.remove('yanlis'), 400);
-      input.value = '';
-    }
-  }).catch(() => { hata.textContent = 'Bağlantı hatası!'; });
+  if (!state.uid) { hata.textContent = 'Bağlantı yok!'; return; }
+  // Şifre artık istemciye okunmaz: kaydı yazarken gönderiyoruz, güvenlik
+  // kuralı sunucuda config/amigo_sifre ile karşılaştırıp doğruluyor.
+  // Yanlış şifrede yazma "permission denied" ile reddedilir → catch.
+  const key = state.uid;
+  state.amigoFirebaseKey = key;
+  state.db.ref('amigolar/' + key).set({
+    isim: state.kullaniciIsim,
+    durum: 'bekliyor',
+    amigoSifre: girilen,
+    girisSaati: new Date().toISOString()
+  }).then(() => {
+    gidOnayBekle(key);
+  }).catch(() => {
+    input.classList.add('yanlis');
+    hata.textContent = 'Yanlış şifre, tekrar dene!';
+    setTimeout(() => input.classList.remove('yanlis'), 400);
+    input.value = '';
+  });
 }
 
 function gidOnayBekle(key) {
