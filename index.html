@@ -4,454 +4,172 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>🇹🇷 Türkiye Taraftar Koordinasyon</title>
-
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-
-<!-- QR Code -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
 <style>
-  /* ===== RESET & BASE ===== */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --kirmizi: #CC0000;
-    --kirmizi-koyu: #990000;
-    --kirmizi-acik: #FF3333;
-    --kirmizi-soluk: #FFF0F0;
-    --altin: #D4A017;
-    --altin-acik: #FFF8E7;
-    --beyaz: #FFFFFF;
-    --gri-100: #F5F5F5;
-    --gri-200: #E8E8E8;
-    --gri-400: #999;
-    --gri-700: #444;
-    --yesil: #1a7a1a;
+    --kirmizi: #CC0000; --kirmizi-koyu: #990000; --kirmizi-soluk: #FFF0F0;
+    --altin: #D4A017; --altin-acik: #FFF8E7;
+    --beyaz: #FFFFFF; --gri-100: #F5F5F5; --gri-200: #E8E8E8;
+    --gri-400: #999; --gri-700: #444; --yesil: #1a7a1a;
     --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
   }
+  html, body { height: 100%; font-family: var(--font); background: var(--gri-100); color: var(--gri-700); -webkit-tap-highlight-color: transparent; }
+  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; background: var(--beyaz); display: flex; flex-direction: column; }
 
-  html, body {
-    height: 100%;
-    font-family: var(--font);
-    background: var(--gri-100);
-    color: var(--gri-700);
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  /* ===== LAYOUT ===== */
-  .app {
-    max-width: 480px;
-    margin: 0 auto;
-    min-height: 100vh;
-    background: var(--beyaz);
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ===== HEADER ===== */
-  .header {
-    background: var(--kirmizi);
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  }
+  /* HEADER */
+  .header { background: var(--kirmizi); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
   .header-left { display: flex; align-items: center; gap: 10px; }
   .header-flag { font-size: 22px; }
-  .header-title { color: white; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; }
+  .header-title { color: white; font-size: 15px; font-weight: 700; }
   .header-sub { color: rgba(255,255,255,0.75); font-size: 11px; }
-  .header-mode-badge {
-    background: rgba(255,255,255,0.2);
-    color: white;
-    font-size: 11px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.3);
-  }
+  .header-mode-badge { background: rgba(255,255,255,0.2); color: white; font-size: 11px; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); }
 
-  /* ===== MODE SELECTOR (welcome) ===== */
-  .welcome-screen {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem 1.5rem;
-    gap: 1.5rem;
-  }
+  /* WELCOME */
+  .welcome-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; gap: 1.5rem; }
   .welcome-bayrak { font-size: 64px; text-align: center; }
   .welcome-baslik { font-size: 22px; font-weight: 700; color: var(--kirmizi); text-align: center; }
   .welcome-alt { font-size: 14px; color: var(--gri-400); text-align: center; }
   .welcome-butonlar { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px; }
-
-  .welcome-btn {
-    padding: 18px 20px;
-    border-radius: 14px;
-    border: 2px solid transparent;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    transition: transform 0.1s, box-shadow 0.1s;
-  }
+  .welcome-btn { padding: 18px 20px; border-radius: 14px; border: 2px solid transparent; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: transform 0.1s; }
   .welcome-btn:active { transform: scale(0.97); }
-  .welcome-btn.amigo-btn {
-    background: var(--kirmizi);
-    color: white;
-  }
-  .welcome-btn.taraftar-btn {
-    background: var(--beyaz);
-    color: var(--gri-700);
-    border-color: var(--gri-200);
-  }
+  .welcome-btn.amigo-btn { background: var(--kirmizi); color: white; }
+  .welcome-btn.taraftar-btn { background: var(--beyaz); color: var(--gri-700); border-color: var(--gri-200); }
   .welcome-btn-ikon { font-size: 28px; }
   .welcome-btn-text .btn-baslik { font-size: 16px; font-weight: 700; }
   .welcome-btn-text .btn-alt { font-size: 12px; opacity: 0.7; margin-top: 2px; }
 
-  /* ===== BÖLGE SEÇİM ===== */
-  .bolge-sec-screen {
-    flex: 1;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-  .ekran-baslik { font-size: 13px; font-weight: 600; color: var(--gri-400); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  /* İSİM GİRİŞ EKRANI (ortak) */
+  .isim-giris-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; gap: 1.2rem; text-align: center; }
+  .isim-giris-ikon { font-size: 52px; }
+  .isim-giris-baslik { font-size: 20px; font-weight: 700; color: var(--gri-700); }
+  .isim-giris-alt { font-size: 13px; color: var(--gri-400); }
+  .isim-input { padding: 14px 18px; border: 2px solid var(--gri-200); border-radius: 12px; font-size: 18px; text-align: center; width: 100%; max-width: 300px; font-family: var(--font); transition: border-color 0.15s; }
+  .isim-input:focus { outline: none; border-color: var(--kirmizi); }
+  .sifre-input-alan { padding: 14px 18px; border: 2px solid var(--gri-200); border-radius: 12px; font-size: 20px; text-align: center; letter-spacing: 0.2em; width: 100%; max-width: 300px; font-family: var(--font); transition: border-color 0.15s; }
+  .sifre-input-alan:focus { outline: none; border-color: var(--kirmizi); }
+  .sifre-input-alan.yanlis { border-color: #e53e3e; animation: salla 0.3s ease; }
+  @keyframes salla { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+  .giris-btn { padding: 14px; background: var(--kirmizi); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; max-width: 300px; transition: background 0.15s; }
+  .giris-btn:disabled { background: var(--gri-200); color: var(--gri-400); }
+  .giris-btn:not(:disabled):active { background: var(--kirmizi-koyu); }
+  .hata-yazi { font-size: 13px; color: #e53e3e; font-weight: 600; min-height: 20px; }
+  .geri-btn { background: none; border: none; color: var(--gri-400); font-size: 13px; cursor: pointer; margin-top: -4px; }
 
+  /* ONAY BEKLİYOR */
+  .onay-bekle-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; gap: 1.2rem; text-align: center; }
+  .onay-bekle-ikon { font-size: 52px; }
+  .onay-bekle-baslik { font-size: 18px; font-weight: 700; color: var(--gri-700); }
+  .onay-bekle-alt { font-size: 14px; color: var(--gri-400); line-height: 1.6; }
+  .onay-bekle-isim { font-size: 20px; font-weight: 700; color: var(--kirmizi); }
+  .onay-spinner { width: 36px; height: 36px; border: 3px solid var(--gri-200); border-top-color: var(--kirmizi); border-radius: 50%; animation: don 0.8s linear infinite; }
+  @keyframes don { to { transform: rotate(360deg); } }
+
+  /* BÖLGE SEÇİM */
+  .bolge-sec-screen { flex: 1; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+  .ekran-baslik { font-size: 13px; font-weight: 600; color: var(--gri-400); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
   .bolge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .bolge-kart {
-    border: 2px solid var(--gri-200);
-    border-radius: 14px;
-    padding: 20px 12px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.15s;
-    background: var(--beyaz);
-  }
+  .bolge-kart { border: 2px solid var(--gri-200); border-radius: 14px; padding: 20px 12px; text-align: center; cursor: pointer; transition: all 0.15s; background: var(--beyaz); }
   .bolge-kart:active { transform: scale(0.96); }
-  .bolge-kart.secili {
-    border-color: var(--kirmizi);
-    background: var(--kirmizi-soluk);
-  }
+  .bolge-kart.secili { border-color: var(--kirmizi); background: var(--kirmizi-soluk); }
   .bolge-kart-ikon { font-size: 32px; margin-bottom: 8px; }
   .bolge-kart-isim { font-size: 13px; font-weight: 600; color: var(--gri-700); line-height: 1.3; }
   .bolge-kart.secili .bolge-kart-isim { color: var(--kirmizi); }
-
-  .devam-btn {
-    padding: 16px;
-    background: var(--kirmizi);
-    color: white;
-    border: none;
-    border-radius: 14px;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    width: 100%;
-    margin-top: auto;
-    transition: background 0.15s;
-  }
+  .devam-btn { padding: 16px; background: var(--kirmizi); color: white; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; margin-top: auto; }
   .devam-btn:disabled { background: var(--gri-200); color: var(--gri-400); }
-  .devam-btn:not(:disabled):active { background: var(--kirmizi-koyu); }
 
-  /* ===== TARAFTAR EKRANI ===== */
-  .taraftar-screen {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 1.25rem;
-    gap: 1rem;
-  }
-
-  /* Sıra göstergesi */
-  .sira-bar {
-    display: flex;
-    gap: 6px;
-    justify-content: center;
-    padding: 8px 0;
-  }
-  .sira-dot {
-    height: 6px;
-    border-radius: 3px;
-    background: var(--gri-200);
-    transition: all 0.3s;
-    flex: 1;
-  }
+  /* TARAFTAR EKRANI */
+  .taraftar-screen { flex: 1; display: flex; flex-direction: column; padding: 1.25rem; gap: 1rem; }
+  .sira-bar { display: flex; gap: 6px; justify-content: center; padding: 8px 0; }
+  .sira-dot { height: 6px; border-radius: 3px; background: var(--gri-200); transition: all 0.3s; flex: 1; }
   .sira-dot.aktif { background: var(--kirmizi); }
   .sira-dot.gecti { background: var(--gri-400); }
-
-  /* Bekleme kartı */
-  .bekleme-kart {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: var(--gri-100);
-    border-radius: 20px;
-    padding: 2.5rem 1.5rem;
-    text-align: center;
-    gap: 12px;
-  }
+  .bekleme-kart { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--gri-100); border-radius: 20px; padding: 2.5rem 1.5rem; text-align: center; gap: 12px; }
   .bekleme-ikon { font-size: 48px; opacity: 0.3; }
   .bekleme-yazi { font-size: 16px; color: var(--gri-400); }
-  .bekleme-bolge-chip {
-    background: var(--beyaz);
-    border: 1px solid var(--gri-200);
-    border-radius: 20px;
-    padding: 6px 14px;
-    font-size: 13px;
-    color: var(--gri-700);
-  }
-
-  /* Okuma zamanı kartı */
-  .senin-siran-kart {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background: var(--kirmizi);
-    border-radius: 20px;
-    padding: 1.5rem;
-    gap: 1rem;
-    animation: patla 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-  @keyframes patla {
-    from { transform: scale(0.92); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-  }
-  .senin-siran-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: rgba(255,255,255,0.85);
-    font-size: 13px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-  .senin-siran-label .nokta {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: white;
-    animation: yanip-sön 0.9s ease-in-out infinite;
-  }
-  @keyframes yanip-sön { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-
-  .beste-adi {
-    color: rgba(255,255,255,0.8);
-    font-size: 14px;
-  }
-
-  .sozler-kutu {
-    flex: 1;
-    background: rgba(255,255,255,0.15);
-    border-radius: 14px;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 8px;
-  }
-  .sozler-satir {
-    color: white;
-    font-size: 24px;
-    font-weight: 700;
-    line-height: 1.4;
-    letter-spacing: 0.01em;
-  }
-
-  /* Diğeri okuyor */
-  .diger-okuyor-kart {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background: var(--gri-100);
-    border-radius: 20px;
-    padding: 1.5rem;
-    gap: 1rem;
-  }
+  .bekleme-bolge-chip { background: var(--beyaz); border: 1px solid var(--gri-200); border-radius: 20px; padding: 6px 14px; font-size: 13px; color: var(--gri-700); }
+  .senin-siran-kart { flex: 1; display: flex; flex-direction: column; background: var(--kirmizi); border-radius: 20px; padding: 1.5rem; gap: 1rem; animation: patla 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  @keyframes patla { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .senin-siran-label { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+  .senin-siran-label .nokta { width: 8px; height: 8px; border-radius: 50%; background: white; animation: yanip 0.9s ease-in-out infinite; }
+  @keyframes yanip { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .beste-adi { color: rgba(255,255,255,0.8); font-size: 14px; }
+  .sozler-kutu { flex: 1; background: rgba(255,255,255,0.15); border-radius: 14px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+  .sozler-satir { color: white; font-size: 24px; font-weight: 700; line-height: 1.4; }
+  .diger-okuyor-kart { flex: 1; display: flex; flex-direction: column; background: var(--gri-100); border-radius: 20px; padding: 1.5rem; gap: 1rem; }
   .diger-label { font-size: 12px; color: var(--gri-400); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
   .diger-bolge-isim { font-size: 17px; font-weight: 700; color: var(--gri-700); }
-  .diger-sozler-kutu {
-    flex: 1;
-    background: var(--beyaz);
-    border-radius: 12px;
-    padding: 1.25rem;
-    border: 1px solid var(--gri-200);
-  }
+  .diger-sozler-kutu { flex: 1; background: var(--beyaz); border-radius: 12px; padding: 1.25rem; border: 1px solid var(--gri-200); }
   .diger-sozler-satir { font-size: 18px; color: var(--gri-400); line-height: 1.6; }
-  .senin-siran-bekle {
-    margin-top: auto;
-    padding: 12px;
-    background: var(--altin-acik);
-    border-radius: 10px;
-    font-size: 13px;
-    color: var(--altin);
-    font-weight: 600;
-    text-align: center;
-  }
+  .senin-siran-bekle { margin-top: auto; padding: 12px; background: var(--altin-acik); border-radius: 10px; font-size: 13px; color: var(--altin); font-weight: 600; text-align: center; }
 
-  /* ===== AMİGO PANELİ ===== */
-  .amigo-screen {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 1.25rem;
-    gap: 1.25rem;
-    overflow-y: auto;
-  }
-
+  /* AMİGO PANELİ */
+  .amigo-screen { flex: 1; display: flex; flex-direction: column; padding: 1.25rem; gap: 1.25rem; overflow-y: auto; }
   .beste-listesi { display: flex; flex-direction: column; gap: 8px; }
-  .beste-item {
-    border: 2px solid var(--gri-200);
-    border-radius: 12px;
-    padding: 14px 16px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    transition: all 0.15s;
-    background: var(--beyaz);
-  }
+  .beste-item { border: 2px solid var(--gri-200); border-radius: 12px; padding: 14px 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.15s; background: var(--beyaz); }
   .beste-item:active { transform: scale(0.98); }
   .beste-item.secili { border-color: var(--kirmizi); background: var(--kirmizi-soluk); }
   .beste-item-adi { font-size: 15px; font-weight: 600; }
   .beste-item.secili .beste-item-adi { color: var(--kirmizi); }
   .beste-item-meta { font-size: 12px; color: var(--gri-400); margin-top: 2px; }
   .beste-check { color: var(--kirmizi); font-size: 20px; }
-
-  /* Bölge sıralama */
+  .beste-sil-btn { background: none; border: none; color: var(--gri-400); font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+  .beste-sil-btn:hover { color: var(--kirmizi); background: var(--kirmizi-soluk); }
+  .beste-ekle-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 2px dashed var(--gri-200); border-radius: 12px; background: transparent; color: var(--kirmizi); font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; }
+  .beste-ekle-btn:hover { border-color: var(--kirmizi); background: var(--kirmizi-soluk); }
   .bolge-sira-liste { display: flex; flex-direction: column; gap: 8px; }
-  .bolge-sira-item {
-    border: 1px solid var(--gri-200);
-    border-radius: 12px;
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--beyaz);
-    transition: all 0.2s;
-  }
+  .bolge-sira-item { border: 1px solid var(--gri-200); border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; background: var(--beyaz); transition: all 0.2s; }
   .bolge-sira-item.aktif { border-color: var(--kirmizi); background: var(--kirmizi-soluk); }
   .bolge-sira-item.gecti { opacity: 0.45; }
-  .bolge-sira-no {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    background: var(--gri-200);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700; color: var(--gri-700);
-    flex-shrink: 0;
-  }
+  .bolge-sira-no { width: 28px; height: 28px; border-radius: 50%; background: var(--gri-200); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
   .bolge-sira-item.aktif .bolge-sira-no { background: var(--kirmizi); color: white; }
   .bolge-sira-item.gecti .bolge-sira-no { background: var(--yesil); color: white; }
   .bolge-sira-ikon { font-size: 22px; }
   .bolge-sira-isim { font-size: 14px; font-weight: 600; flex: 1; }
   .bolge-sira-durum { font-size: 12px; color: var(--gri-400); }
   .bolge-sira-item.aktif .bolge-sira-durum { color: var(--kirmizi); font-weight: 600; }
-
-  /* Kontrol butonları */
   .kontrol-butonlar { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
-  .ana-btn {
-    padding: 16px;
-    border: none;
-    border-radius: 14px;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.15s;
-    width: 100%;
-  }
+  .ana-btn { padding: 16px; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; transition: all 0.15s; }
   .ana-btn:active { transform: scale(0.97); }
   .ana-btn.basla { background: var(--kirmizi); color: white; }
   .ana-btn.dur { background: #222; color: white; }
   .ana-btn.siradaki { background: var(--beyaz); color: var(--gri-700); border: 2px solid var(--gri-200); }
 
-  /* ===== QR EKRANI ===== */
-  .qr-screen {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem 1.5rem;
-    gap: 1.5rem;
-    text-align: center;
-  }
+  /* QR */
+  .qr-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.5rem; gap: 1.5rem; text-align: center; }
   .qr-baslik { font-size: 18px; font-weight: 700; color: var(--gri-700); }
   .qr-alt { font-size: 13px; color: var(--gri-400); }
-  .qr-kutu {
-    background: white;
-    padding: 20px;
-    border-radius: 20px;
-    border: 2px solid var(--gri-200);
-  }
-  .qr-link {
-    font-size: 12px;
-    color: var(--kirmizi);
-    word-break: break-all;
-    padding: 10px 16px;
-    background: var(--kirmizi-soluk);
-    border-radius: 8px;
-    font-family: monospace;
-    max-width: 320px;
-  }
-  .qr-kapat-btn {
-    padding: 14px 28px;
-    background: var(--beyaz);
-    border: 2px solid var(--gri-200);
-    border-radius: 12px;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--gri-700);
-    cursor: pointer;
-  }
+  .qr-kutu { background: white; padding: 20px; border-radius: 20px; border: 2px solid var(--gri-200); }
+  .qr-link { font-size: 12px; color: var(--kirmizi); word-break: break-all; padding: 10px 16px; background: var(--kirmizi-soluk); border-radius: 8px; font-family: monospace; max-width: 320px; }
+  .qr-kapat-btn { padding: 14px 28px; background: var(--beyaz); border: 2px solid var(--gri-200); border-radius: 12px; font-size: 15px; font-weight: 600; color: var(--gri-700); cursor: pointer; }
 
-  /* ===== DURUM ÇUBUĞU ===== */
-  .durum-bar {
-    background: var(--gri-100);
-    border-top: 1px solid var(--gri-200);
-    padding: 8px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 12px;
-    color: var(--gri-400);
-  }
-  .durum-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--gri-400);
-    display: inline-block;
-    margin-right: 5px;
-  }
+  /* DURUM */
+  .durum-bar { background: var(--gri-100); border-top: 1px solid var(--gri-200); padding: 8px 20px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--gri-400); }
+  .durum-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gri-400); display: inline-block; margin-right: 5px; }
   .durum-dot.bagli { background: var(--yesil); }
-  .durum-dot.bekle { background: var(--altin); animation: yanip-sön 1s ease-in-out infinite; }
+  .durum-dot.bekle { background: var(--altin); animation: yanip 1s ease-in-out infinite; }
 
-  /* ===== NAV ===== */
-  .bottom-nav {
-    display: flex;
-    border-top: 1px solid var(--gri-200);
-    background: var(--beyaz);
-  }
-  .nav-btn {
-    flex: 1;
-    padding: 12px 8px 10px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    color: var(--gri-400);
-    font-size: 10px;
-    transition: color 0.15s;
-  }
+  /* NAV */
+  .bottom-nav { display: flex; border-top: 1px solid var(--gri-200); background: var(--beyaz); }
+  .nav-btn { flex: 1; padding: 12px 8px 10px; border: none; background: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--gri-400); font-size: 10px; transition: color 0.15s; }
   .nav-btn.aktif { color: var(--kirmizi); }
   .nav-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* BESTE EKLE MODALİ */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
+  .modal-kart { background: var(--beyaz); border-radius: 24px 24px 0 0; padding: 1.5rem; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; animation: yukariCik 0.25s ease; }
+  @keyframes yukariCik { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-baslik { font-size: 18px; font-weight: 700; color: var(--gri-700); display: flex; align-items: center; justify-content: space-between; }
+  .modal-kapat { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--gri-200); color: var(--gri-700); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .form-grup { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--gri-400); text-transform: uppercase; letter-spacing: 0.06em; }
+  .form-input { padding: 12px 14px; border: 2px solid var(--gri-200); border-radius: 10px; font-size: 15px; font-family: var(--font); color: var(--gri-700); background: var(--beyaz); width: 100%; transition: border-color 0.15s; resize: none; }
+  .form-input:focus { outline: none; border-color: var(--kirmizi); }
+  .bolge-form-grup { background: var(--gri-100); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .bolge-form-baslik { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--gri-700); margin-bottom: 2px; }
+  .kaydet-btn { padding: 16px; background: var(--kirmizi); color: white; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 4px; }
 
   .hidden { display: none !important; }
 </style>
@@ -471,8 +189,6 @@
     <div class="header-mode-badge" id="mode-badge">Ana Sayfa</div>
   </div>
 
-  <!-- EKRANLAR -->
-
   <!-- 1. HOŞ GELDİN -->
   <div class="welcome-screen" id="ekran-hosgeldin">
     <div class="welcome-bayrak">🇹🇷⚽🎤</div>
@@ -481,14 +197,14 @@
       <div class="welcome-alt" style="margin-top:8px">Rolünü seç ve maça hazırlan</div>
     </div>
     <div class="welcome-butonlar">
-      <button class="welcome-btn amigo-btn" onclick="gidAmigo()">
+      <button class="welcome-btn amigo-btn" onclick="gidAmigoIsim()">
         <span class="welcome-btn-ikon">🎤</span>
         <div class="welcome-btn-text">
           <div class="btn-baslik">Amigo</div>
           <div class="btn-alt">Besteleri ben yönetirim</div>
         </div>
       </button>
-      <button class="welcome-btn taraftar-btn" onclick="gidBolgeSec()">
+      <button class="welcome-btn taraftar-btn" onclick="gidTaraftarIsim()">
         <span class="welcome-btn-ikon">👥</span>
         <div class="welcome-btn-text">
           <div class="btn-baslik">Taraftar</div>
@@ -498,7 +214,19 @@
     </div>
   </div>
 
-  <!-- 2. BÖLGE SEÇ -->
+  <!-- 2a. TARAFTAR İSİM GİRİŞ -->
+  <div class="isim-giris-screen hidden" id="ekran-taraftar-isim">
+    <div class="isim-giris-ikon">👤</div>
+    <div class="isim-giris-baslik">İsmini gir</div>
+    <div class="isim-giris-alt">Amigolar seni tanısın!</div>
+    <input class="isim-input" id="taraftar-isim-input" type="text" placeholder="Adın" maxlength="30"
+           onkeydown="if(event.key==='Enter') taraftarIsimDevam()">
+    <div class="hata-yazi" id="taraftar-isim-hata"></div>
+    <button class="giris-btn" onclick="taraftarIsimDevam()">Devam et →</button>
+    <button class="geri-btn" onclick="gidHosgeldin()">← Geri dön</button>
+  </div>
+
+  <!-- 2b. TARAFTAR BÖLGE SEÇ -->
   <div class="bolge-sec-screen hidden" id="ekran-bolge-sec">
     <div class="ekran-baslik">Bulunduğun bölgeyi seç</div>
     <div class="bolge-grid" id="bolge-grid-sec"></div>
@@ -511,16 +239,51 @@
     <div id="taraftar-icerik"></div>
   </div>
 
-  <!-- 4. AMİGO PANELİ -->
+  <!-- 4a. AMİGO İSİM GİRİŞ -->
+  <div class="isim-giris-screen hidden" id="ekran-amigo-isim">
+    <div class="isim-giris-ikon">🎤</div>
+    <div class="isim-giris-baslik">Amigo Girişi</div>
+    <div class="isim-giris-alt">Önce ismini gir</div>
+    <input class="isim-input" id="amigo-isim-input" type="text" placeholder="Adın" maxlength="30"
+           onkeydown="if(event.key==='Enter') amigoIsimDevam()">
+    <div class="hata-yazi" id="amigo-isim-hata"></div>
+    <button class="giris-btn" onclick="amigoIsimDevam()">Devam et →</button>
+    <button class="geri-btn" onclick="gidHosgeldin()">← Geri dön</button>
+  </div>
+
+  <!-- 4b. AMİGO ŞİFRE -->
+  <div class="isim-giris-screen hidden" id="ekran-amigo-sifre">
+    <div class="isim-giris-ikon">🔐</div>
+    <div class="isim-giris-baslik">Amigo Şifresi</div>
+    <div class="isim-giris-alt">Sana verilen şifreyi gir</div>
+    <input class="sifre-input-alan" id="sifre-input" type="password" placeholder="••••••" maxlength="20"
+           onkeydown="if(event.key==='Enter') sifreKontrol()">
+    <div class="hata-yazi" id="sifre-hata"></div>
+    <button class="giris-btn" onclick="sifreKontrol()">Giriş Yap →</button>
+    <button class="geri-btn" onclick="gidAmigoIsim()">← Geri dön</button>
+  </div>
+
+  <!-- 4c. AMİGO ONAY BEKLİYOR -->
+  <div class="onay-bekle-screen hidden" id="ekran-onay-bekle">
+    <div class="onay-bekle-ikon">⏳</div>
+    <div class="onay-bekle-baslik">Onay bekleniyor</div>
+    <div class="onay-bekle-isim" id="onay-isim-goster"></div>
+    <div class="onay-bekle-alt">Yönetici seni amigo olarak onaylayana kadar bekle. Bu ekranı kapatma!</div>
+    <div class="onay-spinner"></div>
+    <button class="geri-btn" onclick="gidHosgeldin()">← Vazgeç</button>
+  </div>
+
+  <!-- 5. AMİGO PANELİ -->
   <div class="amigo-screen hidden" id="ekran-amigo">
     <div class="ekran-baslik">Beste seç</div>
     <div class="beste-listesi" id="beste-listesi"></div>
+    <button class="beste-ekle-btn" onclick="modalAc()">+ Yeni beste ekle</button>
     <div class="ekran-baslik">Sıra düzeni</div>
     <div class="bolge-sira-liste" id="bolge-sira-liste"></div>
     <div class="kontrol-butonlar" id="kontrol-butonlar"></div>
   </div>
 
-  <!-- 5. QR EKRANI -->
+  <!-- 6. QR EKRANI -->
   <div class="qr-screen hidden" id="ekran-qr">
     <div class="qr-baslik">Taraftarlarla paylaş</div>
     <div class="qr-alt">QR kodu telefonla tarat veya linki paylaş</div>
@@ -529,13 +292,45 @@
     <button class="qr-kapat-btn" onclick="gidHosgeldin()">← Geri dön</button>
   </div>
 
+  <!-- BESTE EKLE MODALİ -->
+  <div class="modal-overlay hidden" id="beste-modal" onclick="modalDisiKapat(event)">
+    <div class="modal-kart">
+      <div class="modal-baslik">
+        <span>Yeni Beste Ekle</span>
+        <button class="modal-kapat" onclick="modalKapat()">✕</button>
+      </div>
+      <div class="form-grup">
+        <div class="form-label">Beste Adı</div>
+        <input class="form-input" id="beste-adi-input" type="text" placeholder="örn: Hadi Türkiye Marşı" maxlength="50">
+      </div>
+      <div class="form-label" style="margin-bottom:-6px">Her bölge için sözler (satır satır yaz)</div>
+      <div class="bolge-form-grup">
+        <div class="bolge-form-baslik">🥅 Sol Kale Arkası</div>
+        <textarea class="form-input" id="sozler-sol-kale" rows="2" placeholder="Hadi Türkiye!&#10;Hadi Türkiye!"></textarea>
+      </div>
+      <div class="bolge-form-grup">
+        <div class="bolge-form-baslik">⬅️ Sol Orta Tribün</div>
+        <textarea class="form-input" id="sozler-sol-orta" rows="2" placeholder="Kırmızı beyaz!&#10;Şampiyon!"></textarea>
+      </div>
+      <div class="bolge-form-grup">
+        <div class="bolge-form-baslik">➡️ Sağ Orta Tribün</div>
+        <textarea class="form-input" id="sozler-sag-orta" rows="2" placeholder="Vur vuuuur!&#10;Gol olsun!"></textarea>
+      </div>
+      <div class="bolge-form-grup">
+        <div class="bolge-form-baslik">🥅 Sağ Kale Arkası</div>
+        <textarea class="form-input" id="sozler-sag-kale" rows="2" placeholder="TÜRKİYE!&#10;TÜRKİYE!"></textarea>
+      </div>
+      <button class="kaydet-btn" onclick="besteKaydet()">💾 Kaydet</button>
+    </div>
+  </div>
+
   <!-- DURUM ÇUBUĞU -->
   <div class="durum-bar" id="durum-bar">
     <span><span class="durum-dot bekle" id="durum-dot"></span><span id="durum-yazi">Bağlanıyor...</span></span>
     <span id="durum-sag"></span>
   </div>
 
-  <!-- ALT NAV (amigo ve taraftar için) -->
+  <!-- ALT NAV -->
   <div class="bottom-nav hidden" id="bottom-nav">
     <button class="nav-btn" id="nav-beste" onclick="navGit('beste')">
       <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
@@ -552,10 +347,8 @@
   </div>
 
 </div>
-
 <script>
-// ===== FİREBASE CONFIG =====
-// ⚠️  BURAYA KENDİ FİREBASE CONFIG BİLGİLERİNİ GİR
+// ===== FİREBASE =====
 const firebaseConfig = {
   apiKey: "AIzaSyDv2mXYcHR49q_rzVj0vweql3Cy5B6wtwo",
   authDomain: "turkiye-taraftar.firebaseapp.com",
@@ -567,94 +360,84 @@ const firebaseConfig = {
   measurementId: "G-18J4L3ZJT7"
 };
 
-// ===== VERİ =====
 const BOLGELER = [
-  { id: 'sol-kale', isim: 'Sol Kale Arkası', ikon: '🥅', kisa: 'SKA' },
-  { id: 'sol-orta', isim: 'Sol Orta Tribün', ikon: '⬅️', kisa: 'SOT' },
-  { id: 'sag-orta', isim: 'Sağ Orta Tribün', ikon: '➡️', kisa: 'SOT2' },
-  { id: 'sag-kale', isim: 'Sağ Kale Arkası', ikon: '🥅', kisa: 'SKA2' },
+  { id: 'sol-kale', isim: 'Sol Kale Arkası', ikon: '🥅' },
+  { id: 'sol-orta', isim: 'Sol Orta Tribün', ikon: '⬅️' },
+  { id: 'sag-orta', isim: 'Sağ Orta Tribün', ikon: '➡️' },
+  { id: 'sag-kale', isim: 'Sağ Kale Arkası', ikon: '🥅' },
 ];
 
-// Örnek beste — sen kendi bestelerini ekleyeceksin
-const BESTELER_VARSAYILAN = [
-  {
-    id: 'beste-ornek',
-    isim: '🔴 Hadi Türkiye (Örnek)',
-    meta: 'Örnek beste — test amaçlı',
-    sozler: [
-      ['Hadi Türkiye!', 'Hadi Türkiye!'],
-      ['Kırmızı beyaz!', 'Şampiyon!'],
-      ['Vur vuuuur!', 'Gol olsun!'],
-      ['TÜRKİYE!', 'TÜRKİYE!'],
-    ]
-  }
-];
+const BESTELER_VARSAYILAN = [{
+  id: 'beste-ornek',
+  isim: '🔴 Hadi Türkiye (Örnek)',
+  meta: 'Test amaçlı örnek beste',
+  sozler: [
+    ['Hadi Türkiye!', 'Hadi Türkiye!'],
+    ['Kırmızı beyaz!', 'Şampiyon!'],
+    ['Vur vuuuur!', 'Gol olsun!'],
+    ['TÜRKİYE!', 'TÜRKİYE!'],
+  ]
+}];
 
-// ===== STATE =====
 let state = {
-  mod: 'hosgeldin',    // hosgeldin | bolge-sec | taraftar | amigo | qr
-  taraftarBolge: null,
-  amigo: false,
+  mod: 'hosgeldin',
   db: null,
   bagliMi: false,
+  kullaniciIsim: null,
+  kullaniciRol: null,       // 'taraftar' | 'amigo'
+  taraftarBolge: null,
+  amigo: false,
   besteler: [...BESTELER_VARSAYILAN],
   aktifBeste: null,
   aktifBolgeIdx: -1,
   caliyor: false,
   siralamaBolgeIdx: [0, 1, 2, 3],
+  onayDinleyici: null,
 };
 
 // ===== FİREBASE BAŞLAT =====
-function firebaseBaslat() {
-  try {
-    if (!firebaseConfig.apiKey || firebaseConfig.apiKey === 'FIREBASE_API_KEY') {
-      demoMod();
-      return;
-    }
-    firebase.initializeApp(firebaseConfig);
-    state.db = firebase.database();
+firebase.initializeApp(firebaseConfig);
+state.db = firebase.database();
+
+state.db.ref('.info/connected').on('value', snap => {
+  if (snap.val()) {
     durumGuncelle('bagli', 'Bağlı');
-
-    // Amigo yayınını dinle (taraftar için)
-    state.db.ref('canli').on('value', (snap) => {
-      const veri = snap.val();
-      if (veri && state.mod === 'taraftar') {
-        state.caliyor = veri.caliyor || false;
-        state.aktifBeste = veri.aktifBeste || null;
-        state.aktifBolgeIdx = veri.aktifBolgeIdx !== undefined ? veri.aktifBolgeIdx : -1;
-        state.siralamaBolgeIdx = veri.siralamaBolgeIdx || [0,1,2,3];
-        if (veri.besteler) state.besteler = veri.besteler;
-        taraftarEkraniGuncelle();
-        siraBarGuncelle();
-      }
-      if (veri && state.mod === 'amigo') {
-        if (veri.besteler) state.besteler = veri.besteler;
-        amigoEkraniGuncelle();
-      }
-    });
-
     state.bagliMi = true;
-  } catch(e) {
-    demoMod();
+  } else {
+    durumGuncelle('bekle', 'Bağlanıyor...');
+    state.bagliMi = false;
   }
-}
+});
 
-function demoMod() {
-  durumGuncelle('bekle', 'Demo modu (Firebase yapılandırılmadı)');
-  state.bagliMi = false;
-}
-
-function firebaseYayinla(veri) {
-  if (state.db) {
-    state.db.ref('canli').set(veri);
+// Canlı yayın dinle
+state.db.ref('canli').on('value', snap => {
+  const veri = snap.val();
+  if (!veri) return;
+  if (state.mod === 'taraftar') {
+    state.caliyor = veri.caliyor || false;
+    state.aktifBeste = veri.aktifBeste || null;
+    state.aktifBolgeIdx = veri.aktifBolgeIdx !== undefined ? veri.aktifBolgeIdx : -1;
+    state.siralamaBolgeIdx = veri.siralamaBolgeIdx || [0,1,2,3];
+    if (veri.besteler) state.besteler = veri.besteler;
+    taraftarEkraniGuncelle();
+    siraBarGuncelle();
   }
-}
+});
+
+// Besteler dinle
+state.db.ref('besteler').on('value', snap => {
+  const veri = snap.val();
+  if (veri && Array.isArray(veri)) {
+    state.besteler = veri;
+    if (state.mod === 'amigo') amigoEkraniGuncelle();
+  }
+});
 
 // ===== NAVİGASYON =====
+const TUM_EKRANLAR = ['hosgeldin','taraftar-isim','bolge-sec','taraftar','amigo-isim','amigo-sifre','onay-bekle','amigo','qr'];
+
 function tumEkranlariGizle() {
-  ['hosgeldin','bolge-sec','taraftar','amigo','qr'].forEach(id => {
-    document.getElementById('ekran-'+id).classList.add('hidden');
-  });
+  TUM_EKRANLAR.forEach(id => document.getElementById('ekran-'+id).classList.add('hidden'));
 }
 
 function gidHosgeldin() {
@@ -663,6 +446,28 @@ function gidHosgeldin() {
   document.getElementById('bottom-nav').classList.add('hidden');
   document.getElementById('mode-badge').textContent = 'Ana Sayfa';
   state.mod = 'hosgeldin';
+  state.amigo = false;
+  if (state.onayDinleyici) { state.onayDinleyici(); state.onayDinleyici = null; }
+}
+
+// ===== TARAFTAR AKIŞI =====
+function gidTaraftarIsim() {
+  tumEkranlariGizle();
+  document.getElementById('ekran-taraftar-isim').classList.remove('hidden');
+  document.getElementById('bottom-nav').classList.add('hidden');
+  document.getElementById('mode-badge').textContent = 'Taraftar Girişi';
+  document.getElementById('taraftar-isim-input').value = '';
+  document.getElementById('taraftar-isim-hata').textContent = '';
+  state.mod = 'taraftar-isim';
+  setTimeout(() => document.getElementById('taraftar-isim-input').focus(), 100);
+}
+
+function taraftarIsimDevam() {
+  const isim = document.getElementById('taraftar-isim-input').value.trim();
+  if (!isim) { document.getElementById('taraftar-isim-hata').textContent = 'İsim boş olamaz!'; return; }
+  state.kullaniciIsim = isim;
+  state.kullaniciRol = 'taraftar';
+  gidBolgeSec();
 }
 
 function gidBolgeSec() {
@@ -674,64 +479,10 @@ function gidBolgeSec() {
   bolgeSecRender();
 }
 
-function gidTaraftar() {
-  tumEkranlariGizle();
-  document.getElementById('ekran-taraftar').classList.remove('hidden');
-  document.getElementById('bottom-nav').classList.remove('hidden');
-  document.getElementById('mode-badge').textContent = BOLGELER.find(b=>b.id===state.taraftarBolge)?.isim || 'Taraftar';
-  state.mod = 'taraftar';
-  state.amigo = false;
-  navAktifYap('canli');
-  taraftarEkraniGuncelle();
-  siraBarGuncelle();
-}
-
-function gidAmigo() {
-  tumEkranlariGizle();
-  document.getElementById('ekran-amigo').classList.remove('hidden');
-  document.getElementById('bottom-nav').classList.remove('hidden');
-  document.getElementById('mode-badge').textContent = '🎤 Amigo';
-  state.mod = 'amigo';
-  state.amigo = true;
-  navAktifYap('canli');
-  amigoEkraniGuncelle();
-}
-
-function gidQR() {
-  tumEkranlariGizle();
-  document.getElementById('ekran-qr').classList.remove('hidden');
-  document.getElementById('bottom-nav').classList.remove('hidden');
-  navAktifYap('qr');
-  state.mod = 'qr';
-  qrOlustur();
-}
-
-function navGit(hedef) {
-  if (hedef === 'qr') { gidQR(); return; }
-  if (hedef === 'canli') {
-    if (state.amigo) { gidAmigo(); }
-    else { gidTaraftar(); }
-    return;
-  }
-  if (hedef === 'beste') {
-    if (state.amigo) { gidAmigo(); }
-    return;
-  }
-}
-
-function navAktifYap(hedef) {
-  ['beste','canli','qr'].forEach(id => {
-    document.getElementById('nav-'+id)?.classList.remove('aktif');
-  });
-  document.getElementById('nav-'+hedef)?.classList.add('aktif');
-}
-
-// ===== BÖLGE SEÇİM =====
 function bolgeSecRender() {
   const el = document.getElementById('bolge-grid-sec');
   el.innerHTML = BOLGELER.map(b => `
-    <div class="bolge-kart ${state.taraftarBolge === b.id ? 'secili' : ''}"
-         onclick="bolgeKartSec('${b.id}')">
+    <div class="bolge-kart ${state.taraftarBolge === b.id ? 'secili' : ''}" onclick="bolgeKartSec('${b.id}')">
       <div class="bolge-kart-ikon">${b.ikon}</div>
       <div class="bolge-kart-isim">${b.isim}</div>
     </div>
@@ -746,7 +497,114 @@ function bolgeKartSec(id) {
 
 function bolgeSecimOnayla() {
   if (!state.taraftarBolge) return;
+  // Firebase'e kaydet
+  const key = state.kullaniciIsim.replace(/[.#$\[\]]/g, '_') + '_' + Date.now();
+  state.db.ref('katilimcilar/' + key).set({
+    isim: state.kullaniciIsim,
+    bolge: state.taraftarBolge,
+    bolgeIsim: BOLGELER.find(b => b.id === state.taraftarBolge)?.isim,
+    girisSaati: new Date().toISOString(),
+    rol: 'taraftar'
+  });
   gidTaraftar();
+}
+
+function gidTaraftar() {
+  tumEkranlariGizle();
+  document.getElementById('ekran-taraftar').classList.remove('hidden');
+  document.getElementById('bottom-nav').classList.remove('hidden');
+  document.getElementById('mode-badge').textContent = BOLGELER.find(b=>b.id===state.taraftarBolge)?.isim || 'Taraftar';
+  state.mod = 'taraftar';
+  state.amigo = false;
+  navAktifYap('canli');
+  taraftarEkraniGuncelle();
+  siraBarGuncelle();
+}
+
+// ===== AMİGO AKIŞI =====
+function gidAmigoIsim() {
+  tumEkranlariGizle();
+  document.getElementById('ekran-amigo-isim').classList.remove('hidden');
+  document.getElementById('bottom-nav').classList.add('hidden');
+  document.getElementById('mode-badge').textContent = 'Amigo Girişi';
+  document.getElementById('amigo-isim-input').value = '';
+  document.getElementById('amigo-isim-hata').textContent = '';
+  state.mod = 'amigo-isim';
+  setTimeout(() => document.getElementById('amigo-isim-input').focus(), 100);
+}
+
+function amigoIsimDevam() {
+  const isim = document.getElementById('amigo-isim-input').value.trim();
+  if (!isim) { document.getElementById('amigo-isim-hata').textContent = 'İsim boş olamaz!'; return; }
+  state.kullaniciIsim = isim;
+  gidAmigoSifre();
+}
+
+function gidAmigoSifre() {
+  tumEkranlariGizle();
+  document.getElementById('ekran-amigo-sifre').classList.remove('hidden');
+  document.getElementById('mode-badge').textContent = 'Amigo Şifresi';
+  document.getElementById('sifre-input').value = '';
+  document.getElementById('sifre-hata').textContent = '';
+  state.mod = 'amigo-sifre';
+  setTimeout(() => document.getElementById('sifre-input').focus(), 100);
+}
+
+function sifreKontrol() {
+  const girilen = document.getElementById('sifre-input').value;
+  const hata = document.getElementById('sifre-hata');
+  const input = document.getElementById('sifre-input');
+  if (!state.db) { hata.textContent = 'Bağlantı yok!'; return; }
+  state.db.ref('config/amigo_sifre').get().then(snap => {
+    if (girilen === snap.val()) {
+      // Şifre doğru → Firebase'e kaydet, onay bekle
+      const key = state.kullaniciIsim.replace(/[.#$\[\]]/g, '_') + '_' + Date.now();
+      state.amigoFirebaseKey = key;
+      state.db.ref('amigolar/' + key).set({
+        isim: state.kullaniciIsim,
+        durum: 'bekliyor',
+        girisSaati: new Date().toISOString()
+      });
+      gidOnayBekle(key);
+    } else {
+      input.classList.add('yanlis');
+      hata.textContent = 'Yanlış şifre, tekrar dene!';
+      setTimeout(() => input.classList.remove('yanlis'), 400);
+      input.value = '';
+    }
+  }).catch(() => { hata.textContent = 'Bağlantı hatası!'; });
+}
+
+function gidOnayBekle(key) {
+  tumEkranlariGizle();
+  document.getElementById('ekran-onay-bekle').classList.remove('hidden');
+  document.getElementById('mode-badge').textContent = 'Onay Bekleniyor';
+  document.getElementById('onay-isim-goster').textContent = state.kullaniciIsim;
+  state.mod = 'onay-bekle';
+
+  // Firebase'den onay durumunu dinle
+  const dinleyici = state.db.ref('amigolar/' + key + '/durum').on('value', snap => {
+    if (snap.val() === 'onaylandi') {
+      state.db.ref('amigolar/' + key + '/durum').off('value', dinleyici);
+      gidAmigo();
+    } else if (snap.val() === 'reddedildi') {
+      state.db.ref('amigolar/' + key + '/durum').off('value', dinleyici);
+      alert('Erişim reddedildi.');
+      gidHosgeldin();
+    }
+  });
+  state.onayDinleyici = () => state.db.ref('amigolar/' + key + '/durum').off('value', dinleyici);
+}
+
+function gidAmigo() {
+  tumEkranlariGizle();
+  document.getElementById('ekran-amigo').classList.remove('hidden');
+  document.getElementById('bottom-nav').classList.remove('hidden');
+  document.getElementById('mode-badge').textContent = '🎤 ' + (state.kullaniciIsim || 'Amigo');
+  state.mod = 'amigo';
+  state.amigo = true;
+  navAktifYap('canli');
+  amigoEkraniGuncelle();
 }
 
 // ===== TARAFTAR EKRANI =====
@@ -772,24 +630,17 @@ function taraftarEkraniGuncelle() {
       </div>`;
     return;
   }
-
   const beste = state.besteler.find(b => b.id === state.aktifBeste);
   if (!beste) return;
-
   const aktifBolgeId = BOLGELER[state.siralamaBolgeIdx[state.aktifBolgeIdx]]?.id;
   const bende = aktifBolgeId === state.taraftarBolge;
   const sozler = beste.sozler[state.aktifBolgeIdx] || [];
-
   if (bende) {
     el.innerHTML = `
       <div class="senin-siran-kart">
-        <div class="senin-siran-label">
-          <span class="nokta"></span> Senin sıran!
-        </div>
+        <div class="senin-siran-label"><span class="nokta"></span> Senin sıran!</div>
         <div class="beste-adi">${beste.isim}</div>
-        <div class="sozler-kutu">
-          ${sozler.map(s => `<div class="sozler-satir">${s}</div>`).join('')}
-        </div>
+        <div class="sozler-kutu">${sozler.map(s => `<div class="sozler-satir">${s}</div>`).join('')}</div>
       </div>`;
   } else {
     const okuyanIsim = BOLGELER[state.siralamaBolgeIdx[state.aktifBolgeIdx]]?.isim || '';
@@ -797,9 +648,7 @@ function taraftarEkraniGuncelle() {
       <div class="diger-okuyor-kart">
         <div class="diger-label">Şu an okuyor</div>
         <div class="diger-bolge-isim">${okuyanIsim}</div>
-        <div class="diger-sozler-kutu">
-          ${sozler.map(s => `<div class="diger-sozler-satir">${s}</div>`).join('')}
-        </div>
+        <div class="diger-sozler-kutu">${sozler.map(s => `<div class="diger-sozler-satir">${s}</div>`).join('')}</div>
         <div class="senin-siran-bekle">⏳ Senin sıran yaklaşıyor…</div>
       </div>`;
   }
@@ -807,20 +656,20 @@ function taraftarEkraniGuncelle() {
 
 // ===== AMİGO PANELİ =====
 function amigoEkraniGuncelle() {
-  // Besteler
   const besteEl = document.getElementById('beste-listesi');
   besteEl.innerHTML = state.besteler.map(b => `
-    <div class="beste-item ${state.aktifBeste === b.id ? 'secili' : ''}"
-         onclick="amigoBesteeSec('${b.id}')">
+    <div class="beste-item ${state.aktifBeste === b.id ? 'secili' : ''}" onclick="amigoBesteeSec('${b.id}')">
       <div>
         <div class="beste-item-adi">${b.isim}</div>
         <div class="beste-item-meta">${b.meta}</div>
       </div>
-      ${state.aktifBeste === b.id ? '<span class="beste-check">✓</span>' : ''}
+      <div style="display:flex;align-items:center;gap:6px">
+        ${state.aktifBeste === b.id ? '<span class="beste-check">✓</span>' : ''}
+        ${!state.caliyor ? `<button class="beste-sil-btn" data-sil="${b.id}" onclick="besteSilBtn(this)">🗑</button>` : ''}
+      </div>
     </div>
   `).join('');
 
-  // Bölge sırası
   const bolgeEl = document.getElementById('bolge-sira-liste');
   bolgeEl.innerHTML = state.siralamaBolgeIdx.map((bi, i) => {
     const b = BOLGELER[bi];
@@ -835,17 +684,13 @@ function amigoEkraniGuncelle() {
       </div>`;
   }).join('');
 
-  // Kontrol butonları
   const kontrolEl = document.getElementById('kontrol-butonlar');
   if (!state.caliyor) {
-    kontrolEl.innerHTML = `
-      <button class="ana-btn basla" onclick="amigoBaslat()" ${!state.aktifBeste ? 'disabled style="opacity:.5"' : ''}>
-        ▶ Başlat
-      </button>`;
+    kontrolEl.innerHTML = `<button class="ana-btn basla" onclick="amigoBaslat()" ${!state.aktifBeste ? 'disabled style="opacity:.5"' : ''}>▶ Başlat</button>`;
   } else {
     const sonBolge = state.aktifBolgeIdx >= state.siralamaBolgeIdx.length - 1;
     kontrolEl.innerHTML = `
-      ${!sonBolge ? `<button class="ana-btn siradaki" onclick="amigoSiradaki()">Sıradaki bölge → ${BOLGELER[state.siralamaBolgeIdx[state.aktifBolgeIdx+1]]?.isim}</button>` : ''}
+      ${!sonBolge ? `<button class="ana-btn siradaki" onclick="amigoSiradaki()">Sıradaki → ${BOLGELER[state.siralamaBolgeIdx[state.aktifBolgeIdx+1]]?.isim}</button>` : ''}
       <button class="ana-btn dur" onclick="amigoDurdur()">■ Durdur</button>`;
   }
 }
@@ -869,9 +714,7 @@ function amigoSiradaki() {
     state.aktifBolgeIdx++;
     amigoDurumYayinla();
     amigoEkraniGuncelle();
-  } else {
-    amigoDurdur();
-  }
+  } else { amigoDurdur(); }
 }
 
 function amigoDurdur() {
@@ -882,7 +725,7 @@ function amigoDurdur() {
 }
 
 function amigoDurumYayinla() {
-  firebaseYayinla({
+  state.db.ref('canli').set({
     caliyor: state.caliyor,
     aktifBeste: state.aktifBeste,
     aktifBolgeIdx: state.aktifBolgeIdx,
@@ -892,35 +735,83 @@ function amigoDurumYayinla() {
   });
 }
 
-// ===== QR KOD =====
-let qrOlusturulduMu = false;
+// ===== BESTE EKLE/SİL =====
+function besteSilBtn(btn) {
+  const id = btn.getAttribute('data-sil');
+  if (!confirm('Bu besteyi silmek istiyor musun?')) return;
+  state.besteler = state.besteler.filter(b => b.id !== id);
+  if (state.aktifBeste === id) state.aktifBeste = null;
+  state.db.ref('besteler').set(state.besteler);
+  amigoEkraniGuncelle();
+}
+
+function modalAc() {
+  document.getElementById('beste-modal').classList.remove('hidden');
+  document.getElementById('beste-adi-input').value = '';
+  ['sol-kale','sol-orta','sag-orta','sag-kale'].forEach(id => {
+    document.getElementById('sozler-'+id).value = '';
+  });
+  setTimeout(() => document.getElementById('beste-adi-input').focus(), 100);
+}
+
+function modalKapat() { document.getElementById('beste-modal').classList.add('hidden'); }
+function modalDisiKapat(e) { if (e.target.id === 'beste-modal') modalKapat(); }
+
+function besteKaydet() {
+  const adi = document.getElementById('beste-adi-input').value.trim();
+  if (!adi) { alert('Beste adı boş olamaz!'); return; }
+  const bolgeIdler = ['sol-kale','sol-orta','sag-orta','sag-kale'];
+  const sozler = bolgeIdler.map(id => {
+    const val = document.getElementById('sozler-'+id).value.trim();
+    return val ? val.split('\n').filter(s => s.trim()) : ['...'];
+  });
+  const yeniBeste = { id: 'beste-' + Date.now(), isim: adi, meta: sozler[0][0] + '…', sozler };
+  state.besteler.push(yeniBeste);
+  state.db.ref('besteler').set(state.besteler);
+  modalKapat();
+  amigoEkraniGuncelle();
+}
+
+// ===== QR =====
+let qrHazir = false;
 function qrOlustur() {
-  if (qrOlusturulduMu) return;
+  if (qrHazir) return;
   const url = window.location.href.split('?')[0];
   document.getElementById('qr-link').textContent = url;
   document.getElementById('qr-kutu').innerHTML = '';
   try {
-    new QRCode(document.getElementById('qr-kutu'), {
-      text: url,
-      width: 200,
-      height: 200,
-      colorDark: '#CC0000',
-      colorLight: '#ffffff',
-    });
-    qrOlusturulduMu = true;
+    new QRCode(document.getElementById('qr-kutu'), { text: url, width: 200, height: 200, colorDark: '#CC0000', colorLight: '#ffffff' });
+    qrHazir = true;
   } catch(e) {}
 }
 
-// ===== DURUM =====
-function durumGuncelle(tip, yazi) {
-  const dot = document.getElementById('durum-dot');
-  const text = document.getElementById('durum-yazi');
-  dot.className = 'durum-dot ' + tip;
-  text.textContent = yazi;
+function gidQR() {
+  tumEkranlariGizle();
+  document.getElementById('ekran-qr').classList.remove('hidden');
+  document.getElementById('bottom-nav').classList.remove('hidden');
+  navAktifYap('qr');
+  state.mod = 'qr';
+  qrOlustur();
 }
 
-// ===== BAŞLAT =====
-firebaseBaslat();
+// ===== NAV =====
+function navGit(hedef) {
+  if (hedef === 'qr') { gidQR(); return; }
+  if (hedef === 'canli') { state.amigo ? gidAmigo() : gidTaraftar(); return; }
+  if (hedef === 'beste') { if (state.amigo) gidAmigo(); return; }
+}
+
+function navAktifYap(hedef) {
+  ['beste','canli','qr'].forEach(id => document.getElementById('nav-'+id)?.classList.remove('aktif'));
+  document.getElementById('nav-'+hedef)?.classList.add('aktif');
+}
+
+function durumGuncelle(tip, yazi) {
+  document.getElementById('durum-dot').className = 'durum-dot ' + tip;
+  document.getElementById('durum-yazi').textContent = yazi;
+}
+
+// BAŞLAT
 gidHosgeldin();
 </script>
 </body>
