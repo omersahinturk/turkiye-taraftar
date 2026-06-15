@@ -6,6 +6,7 @@
 <title>🎤 Yönetici Paneli</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -190,7 +191,10 @@ const BOLGELER = [
   { id: 'sag-kale', isim: 'Sağ Kale Arkası', ikon: '🥅' },
 ];
 
-// Yönetici şifresi — Firebase'den çekilir
+// Yönetici girişi gerçek Firebase Auth hesabı ile yapılır.
+// Bu hesabı Firebase Console > Authentication'da oluştur (Email/Password)
+// ve UID'sini database.rules.json içindeki ADMIN_UID_BURAYA yerine yaz.
+const ADMIN_EMAIL = "admin@turkiye-taraftar.web";
 let db = null;
 let girisYapildi = false;
 
@@ -215,23 +219,22 @@ function adminGiris() {
   const hata = document.getElementById('admin-hata');
   const input = document.getElementById('admin-sifre');
 
-  db.ref('config/admin_sifre').get().then(snap => {
-    const dogru = snap.val();
-    if (girilen === dogru) {
-      girisYapildi = true;
-      document.getElementById('giris-ekran').classList.add('hidden');
-      document.getElementById('ana-panel').classList.add('aktif');
-      panelBaslat();
-    } else {
-      input.classList.add('yanlis');
-      hata.textContent = 'Yanlış şifre!';
-      setTimeout(() => input.classList.remove('yanlis'), 400);
-      input.value = '';
-    }
-  }).catch(() => { hata.textContent = 'Bağlantı hatası!'; });
+  // Şifre artık config'ten okunmuyor; gerçek Firebase Auth ile doğrulanıyor.
+  firebase.auth().signInWithEmailAndPassword(ADMIN_EMAIL, girilen).then(() => {
+    girisYapildi = true;
+    document.getElementById('giris-ekran').classList.add('hidden');
+    document.getElementById('ana-panel').classList.add('aktif');
+    panelBaslat();
+  }).catch(() => {
+    input.classList.add('yanlis');
+    hata.textContent = 'Yanlış şifre!';
+    setTimeout(() => input.classList.remove('yanlis'), 400);
+    input.value = '';
+  });
 }
 
 function cikisYap() {
+  firebase.auth().signOut();
   girisYapildi = false;
   document.getElementById('ana-panel').classList.remove('aktif');
   document.getElementById('giris-ekran').classList.remove('hidden');
