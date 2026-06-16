@@ -409,15 +409,23 @@ firebase.initializeApp(firebaseConfig);
 state.db = firebase.database();
 state.auth = firebase.auth();
 
-// Güvenlik kuralları auth gerektirir → önce anonim giriş yap
+// Güvenlik kuralları auth gerektirir → bu sayfa DAİMA anonim olmalı.
 durumGuncelle('bekle', 'Bağlanıyor...');
-state.auth.signInAnonymously().catch(e => {
-  durumGuncelle('bekle', 'Giriş hatası');
-  console.error('Anonim giriş başarısız:', e);
-});
 
 state.auth.onAuthStateChanged(user => {
-  if (!user) return;
+  if (!user) {
+    // Oturum yok → anonim giriş yap
+    state.auth.signInAnonymously().catch(e => {
+      durumGuncelle('bekle', 'Giriş hatası');
+      console.error('Anonim giriş başarısız:', e);
+    });
+    return;
+  }
+  if (!user.isAnonymous) {
+    // İstenmeyen (örn. aynı tarayıcıdan sızan admin) oturum → temizle, anonime dön
+    state.auth.signOut();
+    return;
+  }
   state.uid = user.uid;
   if (!state.aboneOlundu) {
     state.aboneOlundu = true;
@@ -771,6 +779,10 @@ function amigoDurumYayinla() {
     siralamaBolgeIdx: state.siralamaBolgeIdx,
     besteler: state.besteler,
     ts: Date.now()
+  }).catch(err => {
+    // Yetki reddi = onaylı amigo değilsin ya da oturumun değişti (örn. aynı
+    // tarayıcıda admin girişi anonim kimliği ezmiş olabilir).
+    alert('⚠️ Yayın gönderilemedi. Onaylı amigo oturumun aktif değil; sayfayı yenileyip tekrar amigo olarak giriş yap.\n\n(' + (err && err.message ? err.message : err) + ')');
   });
 }
 
