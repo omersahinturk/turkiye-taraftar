@@ -15,7 +15,10 @@
 
     "besteler": {
       ".read": "auth != null",
-      ".write": "auth != null && root.child('amigolar').child(auth.uid).child('durum').val() === 'onaylandi'"
+      "$besteId": {
+        ".write": "auth != null && (auth.uid === 'fys1pLjvIKg85t4CHlMDaX6zf303' || (root.child('amigolar').child(auth.uid).child('durum').val() === 'onaylandi' && ((!data.exists() && newData.child('sahip').val() === auth.uid) || (data.exists() && data.child('sahip').val() === auth.uid))))",
+        ".validate": "!newData.exists() || newData.hasChildren(['isim', 'sahip'])"
+      }
     },
 
     "amigolar": {

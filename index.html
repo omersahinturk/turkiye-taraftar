@@ -323,7 +323,7 @@
   <div class="modal-overlay hidden" id="beste-modal" onclick="modalDisiKapat(event)">
     <div class="modal-kart">
       <div class="modal-baslik">
-        <span>Yeni Beste Ekle</span>
+        <span id="beste-modal-baslik">Yeni Beste Ekle</span>
         <button class="modal-kapat" onclick="modalKapat()">✕</button>
       </div>
       <div class="form-grup">
@@ -435,6 +435,7 @@ let state = {
   siralamaBolgeIdx: [0, 1, 2, 3],
   onayDinleyici: null,
   amigoGeriYukleBekliyor: false,
+  duzenlenenBesteId: null,
 };
 
 // ===== FİREBASE BAŞLAT =====
@@ -519,13 +520,20 @@ function abonelikleriBaslat() {
 
   // Besteler dinle
   state.db.ref('besteler').on('value', snap => {
-    const veri = snap.val();
-    if (veri && Array.isArray(veri)) {
-      state.besteler = veri;
-      if (state.mod === 'amigo') amigoEkraniGuncelle();
-      else if (state.mod === 'besteler') besteKatalogRender();
-    }
+    state.besteler = besteleriDiziyeCevir(snap.val());
+    if (state.mod === 'amigo') amigoEkraniGuncelle();
+    else if (state.mod === 'besteler') besteKatalogRender();
   });
+}
+
+// Besteler artık id ile anahtarlı bir nesne (map); diziye çevir.
+// Boşsa varsayılan örnek besteyi göster. Eski dizi formatını da tolere et.
+function besteleriDiziyeCevir(veri) {
+  if (!veri) return [...BESTELER_VARSAYILAN];
+  let arr;
+  if (Array.isArray(veri)) arr = veri.filter(Boolean);
+  else arr = Object.keys(veri).map(k => ({ _key: k, ...veri[k] }));
+  return arr.length ? arr : [...BESTELER_VARSAYILAN];
 }
 
 // ===== NAVİGASYON =====
@@ -822,18 +830,20 @@ function taraftarEkraniGuncelle() {
 // ===== AMİGO PANELİ =====
 function amigoEkraniGuncelle() {
   const besteEl = document.getElementById('beste-listesi');
-  besteEl.innerHTML = state.besteler.map(b => `
+  besteEl.innerHTML = state.besteler.map(b => {
+    const benim = b.sahip && b.sahip === state.uid;
+    return `
     <div class="beste-item ${state.aktifBeste === b.id ? 'secili' : ''}" onclick="amigoBesteeSec('${b.id}')">
       <div>
         <div class="beste-item-adi">${b.isim}</div>
-        <div class="beste-item-meta">${b.meta}</div>
+        <div class="beste-item-meta">${b.sahipAd ? '🎤 ' + b.sahipAd : b.meta}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         ${state.aktifBeste === b.id ? '<span class="beste-check">✓</span>' : ''}
-        ${!state.caliyor ? `<button class="beste-sil-btn" data-sil="${b.id}" onclick="besteSilBtn(this)">🗑</button>` : ''}
+        ${(!state.caliyor && benim) ? `<button class="beste-sil-btn" onclick="event.stopPropagation();modalDuzenle('${b.id}')">✏️</button><button class="beste-sil-btn" onclick="event.stopPropagation();besteSil('${b.id}')">🗑</button>` : ''}
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 
   const bolgeEl = document.getElementById('bolge-sira-liste');
   let bolgeHtml = state.siralamaBolgeIdx.map((bi, i) => {
@@ -948,16 +958,16 @@ function amigoDurumYayinla() {
 }
 
 // ===== BESTE EKLE/SİL =====
-function besteSilBtn(btn) {
-  const id = btn.getAttribute('data-sil');
+// Yalnızca sahibi silebilir (UI + güvenlik kuralı). Tek tek id ile siler.
+function besteSil(id) {
   if (!confirm('Bu besteyi silmek istiyor musun?')) return;
-  state.besteler = state.besteler.filter(b => b.id !== id);
   if (state.aktifBeste === id) state.aktifBeste = null;
-  state.db.ref('besteler').set(state.besteler);
-  amigoEkraniGuncelle();
+  state.db.ref('besteler/' + id).remove().catch(() => alert('Beste silinemedi (sadece kendi besteni silebilirsin).'));
 }
 
 function modalAc() {
+  state.duzenlenenBesteId = null;
+  document.getElementById('beste-modal-baslik').textContent = 'Yeni Beste Ekle';
   document.getElementById('beste-modal').classList.remove('hidden');
   document.getElementById('beste-adi-input').value = '';
   ['bati','guney','dogu','kuzey','herkes'].forEach(id => {
@@ -966,22 +976,37 @@ function modalAc() {
   setTimeout(() => document.getElementById('beste-adi-input').focus(), 100);
 }
 
-function modalKapat() { document.getElementById('beste-modal').classList.add('hidden'); }
+// Sahibi kendi bestesini düzenler — modalı dolu açar
+function modalDuzenle(id) {
+  const beste = state.besteler.find(b => b.id === id);
+  if (!beste) return;
+  state.duzenlenenBesteId = id;
+  document.getElementById('beste-modal-baslik').textContent = 'Besteyi Düzenle';
+  document.getElementById('beste-modal').classList.remove('hidden');
+  document.getElementById('beste-adi-input').value = beste.isim || '';
+  ['bati','guney','dogu','kuzey','herkes'].forEach((bid, i) => {
+    document.getElementById('sozler-'+bid).value = ((beste.sozler || [])[i] || []).join('\n');
+  });
+}
+
+function modalKapat() { state.duzenlenenBesteId = null; document.getElementById('beste-modal').classList.add('hidden'); }
 function modalDisiKapat(e) { if (e.target.id === 'beste-modal') modalKapat(); }
 
 function besteKaydet() {
   const adi = document.getElementById('beste-adi-input').value.trim();
   if (!adi) { alert('Beste adı boş olamaz!'); return; }
+  if (!state.uid) { alert('Bağlantı yok.'); return; }
   const bolgeIdler = ['bati','guney','dogu','kuzey','herkes'];
   const sozler = bolgeIdler.map(id => {
     const val = document.getElementById('sozler-'+id).value.trim();
     return val ? val.split('\n').filter(s => s.trim()) : ['...'];
   });
-  const yeniBeste = { id: 'beste-' + Date.now(), isim: adi, meta: sozler[0][0] + '…', sozler };
-  state.besteler.push(yeniBeste);
-  state.db.ref('besteler').set(state.besteler);
-  modalKapat();
-  amigoEkraniGuncelle();
+  const id = state.duzenlenenBesteId || ('beste-' + Date.now());
+  const sahipAd = (state.kullaniciIsim + ' ' + (state.kullaniciSoyisim || '')).trim();
+  const beste = { id, isim: adi, meta: sozler[0][0] + '…', sozler, sahip: state.uid, sahipAd };
+  state.db.ref('besteler/' + id).set(beste).then(() => {
+    modalKapat();
+  }).catch(() => alert('Beste kaydedilemedi (sadece kendi besteni düzenleyebilirsin).'));
 }
 
 // ===== QR =====
