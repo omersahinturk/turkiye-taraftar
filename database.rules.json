@@ -19,19 +19,19 @@
     },
 
     "amigolar": {
-      ".read": "auth != null && auth.uid === 'ADMIN_UID_BURAYA'",
+      ".read": "auth != null && auth.uid === 'fys1pLjvIKg85t4CHlMDaX6zf303'",
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID_BURAYA')",
-        ".write": "auth != null && (auth.uid === 'ADMIN_UID_BURAYA' || (auth.uid === $uid && !data.exists() && newData.child('durum').val() === 'bekliyor' && newData.child('amigoSifre').val() === root.child('config').child('amigo_sifre').val()))",
+        ".read": "auth != null && (auth.uid === $uid || auth.uid === 'fys1pLjvIKg85t4CHlMDaX6zf303')",
+        ".write": "auth != null && (auth.uid === 'fys1pLjvIKg85t4CHlMDaX6zf303' || (auth.uid === $uid && newData.child('durum').val() === 'bekliyor' && newData.child('amigoSifre').val() === root.child('config').child('amigo_sifre').val()))",
         ".validate": "newData.hasChildren(['isim', 'durum'])"
       }
     },
 
     "katilimcilar": {
-      ".read": "auth != null && auth.uid === 'ADMIN_UID_BURAYA'",
+      ".read": "auth != null && auth.uid === 'fys1pLjvIKg85t4CHlMDaX6zf303'",
       "$uid": {
-        ".read": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID_BURAYA')",
-        ".write": "auth != null && (auth.uid === $uid || auth.uid === 'ADMIN_UID_BURAYA')",
+        ".read": "auth != null && (auth.uid === $uid || auth.uid === 'fys1pLjvIKg85t4CHlMDaX6zf303')",
+        ".write": "auth != null && (auth.uid === $uid || auth.uid === 'fys1pLjvIKg85t4CHlMDaX6zf303')",
         ".validate": "newData.hasChildren(['isim', 'bolge'])"
       }
     }
