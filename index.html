@@ -433,6 +433,7 @@ const BESTELER_VARSAYILAN = [{
     ['Kırmızı beyaz!', 'Şampiyon!'],
     ['Vur vuuuur!', 'Gol olsun!'],
     ['TÜRKİYE!', 'TÜRKİYE!'],
+    ['HEP BİRLİKTE!', 'TÜRKİYE! TÜRKİYE!'],
   ]
 }];
 
@@ -458,6 +459,7 @@ let state = {
   amigoGeriYukleBekliyor: false,
   duzenlenenBesteId: null,
   yeniBesteTur: 'sirali',
+  herkesTumu: false,
 };
 
 // ===== FİREBASE BAŞLAT =====
@@ -524,6 +526,7 @@ function abonelikleriBaslat() {
       state.aktifBeste = veri.aktifBeste || null;
       state.aktifBolgeIdx = veri.aktifBolgeIdx !== undefined ? veri.aktifBolgeIdx : -1;
       state.herkesAktif = veri.herkesAktif || false;
+      state.herkesTumu = veri.herkesTumu || false;
       state.siralamaBolgeIdx = veri.siralamaBolgeIdx || [0,1,2,3];
       if (veri.besteler) state.besteler = veri.besteler;
       taraftarEkraniGuncelle();
@@ -534,6 +537,7 @@ function abonelikleriBaslat() {
       state.aktifBeste = veri.aktifBeste || state.aktifBeste;
       state.aktifBolgeIdx = veri.aktifBolgeIdx !== undefined ? veri.aktifBolgeIdx : -1;
       state.herkesAktif = veri.herkesAktif || false;
+      state.herkesTumu = veri.herkesTumu || false;
       state.siralamaBolgeIdx = veri.siralamaBolgeIdx || [0,1,2,3];
       if (veri.besteler) state.besteler = veri.besteler;
       amigoEkraniGuncelle();
@@ -815,16 +819,21 @@ function taraftarEkraniGuncelle() {
       </div>`;
     return;
   }
-  // HERKES BİRLİKTE — tüm taraftarlar aynı sözleri söyler
+  // HERKES BİRLİKTE — tüm taraftarlar (tribün fark etmez) aynı sözleri görür.
+  // Standalone başlat (herkesTumu) → tüm beste; sıralı finale → son (herkes) kısım.
   if (state.herkesAktif) {
-    // Herkes Birlikte: tribün fark etmeksizin TÜM bestenin sözleri büyük görünür
-    const tumSozler = (beste.sozler || []).reduce((acc, bolum) => acc.concat(bolum || []), [])
-      .filter(s => s && s !== '...');
+    let sozler;
+    if (state.herkesTumu) {
+      sozler = (beste.sozler || []).reduce((acc, bolum) => acc.concat(bolum || []), [])
+        .filter(s => s && s !== '...');
+    } else {
+      sozler = ((beste.sozler || [])[(beste.sozler || []).length - 1] || []).filter(s => s && s !== '...');
+    }
     el.innerHTML = `
       <div class="senin-siran-kart">
         <div class="senin-siran-label"><span class="nokta"></span> 🔴 Herkes Birlikte!</div>
         <div class="beste-adi">${beste.isim}</div>
-        <div class="sozler-kutu">${tumSozler.map(s => `<div class="sozler-satir">${s}</div>`).join('')}</div>
+        <div class="sozler-kutu">${sozler.map(s => `<div class="sozler-satir">${s}</div>`).join('')}</div>
       </div>`;
     return;
   }
@@ -881,10 +890,10 @@ function amigoEkraniGuncelle() {
         <div class="bolge-sira-durum">${state.caliyor ? '🎤 Yayında' : ''}</div>
       </div>`;
   } else {
-    bolgeEl.innerHTML = state.siralamaBolgeIdx.map((bi, i) => {
+    let bolgeHtml = state.siralamaBolgeIdx.map((bi, i) => {
       const b = BOLGELER[bi];
-      const aktif = state.caliyor && state.aktifBolgeIdx === i;
-      const gecti = state.caliyor && state.aktifBolgeIdx > i;
+      const aktif = state.caliyor && !state.herkesAktif && state.aktifBolgeIdx === i;
+      const gecti = state.caliyor && (state.herkesAktif || state.aktifBolgeIdx > i);
       return `
         <div class="bolge-sira-item ${aktif ? 'aktif' : gecti ? 'gecti' : ''}">
           <div class="bolge-sira-no">${gecti ? '✓' : i+1}</div>
@@ -893,23 +902,38 @@ function amigoEkraniGuncelle() {
           <div class="bolge-sira-durum">${aktif ? '🎤 Okuyor' : gecti ? 'Bitti' : ''}</div>
         </div>`;
     }).join('');
+    // 5. adım: Herkes (Birlikte) finalesi
+    const finalAktif = state.caliyor && state.herkesAktif && !state.herkesTumu;
+    bolgeHtml += `
+      <div class="bolge-sira-item ${finalAktif ? 'aktif' : ''}" style="border-color:var(--kirmizi)">
+        <div class="bolge-sira-no">${state.siralamaBolgeIdx.length + 1}</div>
+        <div class="bolge-sira-ikon">🔴</div>
+        <div class="bolge-sira-isim">Herkes (Birlikte)</div>
+        <div class="bolge-sira-durum">${finalAktif ? '🎤 Hep birlikte' : ''}</div>
+      </div>`;
+    bolgeEl.innerHTML = bolgeHtml;
   }
 
+  const herkesBtn = `<button class="ana-btn siradaki" onclick="herkesBaslat()" style="background:var(--kirmizi-soluk);color:var(--kirmizi);border:2px solid var(--kirmizi)">🔴 Herkes Birlikte Başlat</button>`;
   const kontrolEl = document.getElementById('kontrol-butonlar');
   if (!state.caliyor) {
     if (!state.aktifBeste) {
       kontrolEl.innerHTML = `<button class="ana-btn basla" disabled style="opacity:.5">▶ Başlat</button>`;
     } else if (aktifTur === 'herkes') {
-      kontrolEl.innerHTML = `<button class="ana-btn siradaki" onclick="herkesBaslat()" style="background:var(--kirmizi-soluk);color:var(--kirmizi);border:2px solid var(--kirmizi)">🔴 Herkes Birlikte Başlat</button>`;
+      // Herkes türü beste: yalnızca herkes birlikte
+      kontrolEl.innerHTML = herkesBtn;
     } else {
-      kontrolEl.innerHTML = `<button class="ana-btn basla" onclick="amigoBaslat()">▶ Sırayla Başlat</button>`;
+      // Sıralı beste: iki seçenek birden
+      kontrolEl.innerHTML = `<button class="ana-btn basla" onclick="amigoBaslat()">▶ Sırayla Başlat</button>${herkesBtn}`;
     }
   } else if (state.herkesAktif) {
     kontrolEl.innerHTML = `<button class="ana-btn dur" onclick="amigoDurdur()">■ Durdur</button>`;
   } else {
+    // Sıralı oynatım: son tribünden sonra "Sıradaki" Herkes finalesine geçer
     const sonBolge = state.aktifBolgeIdx >= state.siralamaBolgeIdx.length - 1;
+    const sonrakiAd = sonBolge ? '🔴 Herkes (Birlikte)' : (BOLGELER[state.siralamaBolgeIdx[state.aktifBolgeIdx+1]]?.isim || '');
     kontrolEl.innerHTML = `
-      ${!sonBolge ? `<button class="ana-btn siradaki" onclick="amigoSiradaki()">Sıradaki → ${BOLGELER[state.siralamaBolgeIdx[state.aktifBolgeIdx+1]]?.isim || ''}</button>` : ''}
+      <button class="ana-btn siradaki" onclick="amigoSiradaki()">Sıradaki → ${sonrakiAd}</button>
       <button class="ana-btn dur" onclick="amigoDurdur()">■ Durdur</button>`;
   }
 }
@@ -926,6 +950,7 @@ function amigoBaslat() {
   state.caliyor = true;
   state.aktifBolgeIdx = 0;
   state.herkesAktif = false;
+  state.herkesTumu = false;
   amigoDurumYayinla();
   amigoEkraniGuncelle();
 }
@@ -934,19 +959,22 @@ function amigoSiradaki() {
   if (state.herkesAktif) return;
   if (state.aktifBolgeIdx < state.siralamaBolgeIdx.length - 1) {
     state.aktifBolgeIdx++;
-    amigoDurumYayinla();
-    amigoEkraniGuncelle();
   } else {
-    amigoDurdur();   // son tribünden sonra dur
+    // Son tribünden sonra → Herkes (Birlikte) finalesi: son kısım herkese
+    state.herkesAktif = true;
+    state.herkesTumu = false;
   }
+  amigoDurumYayinla();
+  amigoEkraniGuncelle();
 }
 
-// HERKES beste: herkes aynı sözleri birlikte söyler (tüm beste büyük görünür)
+// Herkes Birlikte Başlat: tüm beste büyük, herkese (sıralamayı atlar)
 function herkesBaslat() {
   if (!state.aktifBeste) return;
   state.caliyor = true;
   state.aktifBolgeIdx = 0;
   state.herkesAktif = true;
+  state.herkesTumu = true;
   amigoDurumYayinla();
   amigoEkraniGuncelle();
 }
@@ -955,6 +983,7 @@ function amigoDurdur() {
   state.caliyor = false;
   state.aktifBolgeIdx = -1;
   state.herkesAktif = false;
+  state.herkesTumu = false;
   amigoDurumYayinla();
   amigoEkraniGuncelle();
 }
@@ -965,6 +994,7 @@ function amigoDurumYayinla() {
     aktifBeste: state.aktifBeste,
     aktifBolgeIdx: state.aktifBolgeIdx,
     herkesAktif: state.herkesAktif,
+    herkesTumu: state.herkesTumu,
     siralamaBolgeIdx: state.siralamaBolgeIdx,
     besteler: state.besteler,
     ts: Date.now()
@@ -986,8 +1016,9 @@ function besteSil(id) {
 // Modal tür seçimi: alanları ve buton vurgusunu değiştirir
 function modalTurSec(tur) {
   state.yeniBesteTur = tur;
+  // Sıralı: 4 tribün + Herkes(son) alanı. Herkes türü: yalnızca Herkes alanı.
   document.getElementById('modal-sirali-alanlar').classList.toggle('hidden', tur !== 'sirali');
-  document.getElementById('modal-herkes-alanlar').classList.toggle('hidden', tur !== 'herkes');
+  document.getElementById('modal-herkes-alanlar').classList.remove('hidden');
   document.getElementById('tur-btn-sirali').classList.toggle('secili', tur === 'sirali');
   document.getElementById('tur-btn-herkes').classList.toggle('secili', tur === 'herkes');
 }
@@ -1022,7 +1053,7 @@ function modalDuzenle(id) {
   if (tur === 'herkes') {
     document.getElementById('sozler-herkes').value = ((beste.sozler || [])[0] || []).join('\n');
   } else {
-    ['bati','guney','dogu','kuzey'].forEach((bid, i) => {
+    ['bati','guney','dogu','kuzey','herkes'].forEach((bid, i) => {
       document.getElementById('sozler-'+bid).value = ((beste.sozler || [])[i] || []).join('\n');
     });
   }
@@ -1041,7 +1072,8 @@ function besteKaydet() {
     const val = document.getElementById('sozler-herkes').value.trim();
     sozler = [ val ? val.split('\n').filter(s => s.trim()) : ['...'] ];
   } else {
-    sozler = ['bati','guney','dogu','kuzey'].map(id => {
+    // Sıralı: 4 tribün + Herkes (son) = 5 kısım
+    sozler = ['bati','guney','dogu','kuzey','herkes'].map(id => {
       const val = document.getElementById('sozler-'+id).value.trim();
       return val ? val.split('\n').filter(s => s.trim()) : ['...'];
     });
@@ -1109,7 +1141,7 @@ function besteKatalogRender() {
   const liste = state.besteler || [];
   const sirali = liste.filter(b => (b.tur || 'sirali') === 'sirali');
   const herkes = liste.filter(b => b.tur === 'herkes');
-  const etiketler = ['⬅️ Batı Tribün','⬇️ Güney Tribün','➡️ Doğu Tribün','⬆️ Kuzey Tribün'];
+  const etiketler = ['⬅️ Batı Tribün','⬇️ Güney Tribün','➡️ Doğu Tribün','⬆️ Kuzey Tribün','🔴 Herkes (Birlikte)'];
 
   function kart(b, herkesMi) {
     const bolumler = herkesMi
