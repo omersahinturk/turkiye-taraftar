@@ -198,8 +198,11 @@ const ADMIN_EMAIL = "admin@turkiye-taraftar.web";
 let db = null;
 let girisYapildi = false;
 
-firebase.initializeApp(firebaseConfig);
-db = firebase.database();
+// Admin'i AYRI bir Firebase app örneğinde başlat. Auth kalıcılığı app adına
+// göre saklandığından, bu 'admin' örneği aynı tarayıcıda index.html'in
+// (varsayılan app) anonim amigo/taraftar kimliğini EZMEZ.
+const adminApp = firebase.initializeApp(firebaseConfig, 'admin');
+db = adminApp.database();
 
 db.ref('.info/connected').on('value', snap => {
   const dot = document.getElementById('durum-dot');
@@ -219,8 +222,9 @@ function adminGiris() {
   const hata = document.getElementById('admin-hata');
   const input = document.getElementById('admin-sifre');
 
-  // Şifre artık config'ten okunmuyor; gerçek Firebase Auth ile doğrulanıyor.
-  firebase.auth().signInWithEmailAndPassword(ADMIN_EMAIL, girilen).then(() => {
+  // Şifre config'ten okunmuyor; ayrı 'admin' app örneğiyle Firebase Auth
+  // üzerinden doğrulanıyor (anonim kimliği ezmez).
+  adminApp.auth().signInWithEmailAndPassword(ADMIN_EMAIL, girilen).then(() => {
     girisYapildi = true;
     document.getElementById('giris-ekran').classList.add('hidden');
     document.getElementById('ana-panel').classList.add('aktif');
@@ -234,7 +238,7 @@ function adminGiris() {
 }
 
 function cikisYap() {
-  firebase.auth().signOut();
+  adminApp.auth().signOut();
   girisYapildi = false;
   document.getElementById('ana-panel').classList.remove('aktif');
   document.getElementById('giris-ekran').classList.remove('hidden');
