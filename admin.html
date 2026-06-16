@@ -185,10 +185,10 @@ const firebaseConfig = {
 };
 
 const BOLGELER = [
-  { id: 'sol-kale', isim: 'Sol Kale Arkası', ikon: '🥅' },
-  { id: 'sol-orta', isim: 'Sol Orta Tribün', ikon: '⬅️' },
-  { id: 'sag-orta', isim: 'Sağ Orta Tribün', ikon: '➡️' },
-  { id: 'sag-kale', isim: 'Sağ Kale Arkası', ikon: '🥅' },
+  { id: 'bati',  isim: 'Batı Tribün',  ikon: '⬅️' },
+  { id: 'guney', isim: 'Güney Tribün', ikon: '⬇️' },
+  { id: 'dogu',  isim: 'Doğu Tribün',  ikon: '➡️' },
+  { id: 'kuzey', isim: 'Kuzey Tribün', ikon: '⬆️' },
 ];
 
 // Yönetici girişi gerçek Firebase Auth hesabı ile yapılır.
@@ -283,7 +283,7 @@ function renderBekleyenAmigolar(liste) {
   el.innerHTML = liste.map(a => `
     <div class="amigo-kart bekliyor">
       <div>
-        <div class="amigo-isim">${a.isim}</div>
+        <div class="amigo-isim">${a.isim} ${a.soyisim || ''}</div>
         <div class="amigo-zaman">${saatFormatla(a.girisSaati)}</div>
       </div>
       <div class="amigo-butonlar">
@@ -300,7 +300,7 @@ function renderOnayliAmigolar(liste) {
   el.innerHTML = liste.map(a => `
     <div class="amigo-kart onaylandi">
       <div>
-        <div class="amigo-isim">${a.isim}</div>
+        <div class="amigo-isim">${a.isim} ${a.soyisim || ''}</div>
         <div class="amigo-zaman">${saatFormatla(a.girisSaati)}</div>
       </div>
       <div class="amigo-butonlar">
@@ -349,7 +349,7 @@ function renderTaraftarlar(liste) {
   el.innerHTML = sirali.map(t => `
     <div class="taraftar-kart">
       <div>
-        <div class="taraftar-isim">${t.isim}</div>
+        <div class="taraftar-isim">${t.isim} ${t.soyisim || ''}</div>
         <div class="taraftar-bolge">${t.bolgeIsim || t.bolge || ''}</div>
       </div>
       <div class="taraftar-zaman">${saatFormatla(t.girisSaati)}</div>
