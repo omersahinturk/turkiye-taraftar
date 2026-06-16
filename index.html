@@ -172,6 +172,20 @@
   .bolge-form-baslik { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--gri-700); margin-bottom: 2px; }
   .kaydet-btn { padding: 16px; background: var(--kirmizi); color: white; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 4px; }
 
+  /* TARAFTAR KİMLİK */
+  .taraftar-kimlik { background: var(--kirmizi-soluk); border: 1px solid var(--gri-200); border-radius: 12px; padding: 10px 14px; font-size: 14px; font-weight: 600; color: var(--gri-700); text-align: center; }
+  .taraftar-kimlik .trb { color: var(--kirmizi); }
+
+  /* BESTE KATALOĞU */
+  .besteler-katalog-screen { flex: 1; display: flex; flex-direction: column; padding: 1.25rem; gap: 1rem; overflow-y: auto; }
+  .katalog-kart { background: var(--beyaz); border: 1px solid var(--gri-200); border-radius: 14px; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: 10px; }
+  .katalog-baslik { font-size: 16px; font-weight: 700; color: var(--kirmizi); }
+  .katalog-sahip { font-size: 12px; color: var(--gri-400); font-weight: 600; margin-top: -6px; }
+  .katalog-bolum { background: var(--gri-100); border-radius: 10px; padding: 8px 12px; }
+  .katalog-bolum-ad { font-size: 12px; font-weight: 700; color: var(--gri-700); margin-bottom: 4px; }
+  .katalog-sozler { font-size: 14px; color: var(--gri-700); line-height: 1.5; }
+  .katalog-bos { text-align: center; color: var(--gri-400); font-size: 14px; padding: 2rem; }
+
   .hidden { display: none !important; }
 </style>
 </head>
@@ -238,8 +252,15 @@
 
   <!-- 3. TARAFTAR EKRANI -->
   <div class="taraftar-screen hidden" id="ekran-taraftar">
+    <div class="taraftar-kimlik" id="taraftar-kimlik"></div>
     <div class="sira-bar" id="sira-bar"></div>
     <div id="taraftar-icerik"></div>
+  </div>
+
+  <!-- BESTE KATALOĞU (herkes görebilir) -->
+  <div class="besteler-katalog-screen hidden" id="ekran-besteler">
+    <div class="ekran-baslik">Tüm Besteler · ezberlemek için</div>
+    <div id="besteler-katalog-liste"></div>
   </div>
 
   <!-- 4a. AMİGO İSİM GİRİŞ -->
@@ -294,7 +315,8 @@
     <div class="qr-alt">QR kodu telefonla tarat veya linki paylaş</div>
     <div class="qr-kutu" id="qr-kutu"></div>
     <div class="qr-link" id="qr-link"></div>
-    <button class="qr-kapat-btn" onclick="gidHosgeldin()">← Geri dön</button>
+    <button class="qr-kapat-btn" onclick="linkKopyala()">📋 Linki Kopyala</button>
+    <button class="qr-kapat-btn" onclick="navGit('canli')">← Geri dön</button>
   </div>
 
   <!-- BESTE EKLE MODALİ -->
@@ -412,6 +434,7 @@ let state = {
   caliyor: false,
   siralamaBolgeIdx: [0, 1, 2, 3],
   onayDinleyici: null,
+  amigoGeriYukleBekliyor: false,
 };
 
 // ===== FİREBASE BAŞLAT =====
@@ -443,6 +466,18 @@ state.auth.onAuthStateChanged(user => {
   }
   // Sayfa yenilemesiyle taraftar olarak geri yüklendiyse kaydı tazele
   if (state.mod === 'taraftar') taraftarKaydet();
+  // Amigo olarak geri yükleniyorsa onay durumunu kontrol et
+  if (state.amigoGeriYukleBekliyor) {
+    state.amigoGeriYukleBekliyor = false;
+    state.db.ref('amigolar/' + state.uid + '/durum').get().then(s => {
+      if (s.val() === 'onaylandi') {
+        state.amigoFirebaseKey = state.uid;
+        gidAmigo();
+      } else {
+        oturumTemizle();   // artık onaylı değil → ana sayfada kal
+      }
+    }).catch(() => {});
+  }
 });
 
 // Auth tamamlandıktan sonra DB aboneliklerini başlat
@@ -470,6 +505,15 @@ function abonelikleriBaslat() {
       if (veri.besteler) state.besteler = veri.besteler;
       taraftarEkraniGuncelle();
       siraBarGuncelle();
+    } else if (state.mod === 'amigo' && veri.caliyor) {
+      // Amigo yenilemeden sonra aktif yayını sürdürsün (seçim aşamasını bozma)
+      state.caliyor = true;
+      state.aktifBeste = veri.aktifBeste || state.aktifBeste;
+      state.aktifBolgeIdx = veri.aktifBolgeIdx !== undefined ? veri.aktifBolgeIdx : -1;
+      state.herkesAktif = veri.herkesAktif || false;
+      state.siralamaBolgeIdx = veri.siralamaBolgeIdx || [0,1,2,3];
+      if (veri.besteler) state.besteler = veri.besteler;
+      amigoEkraniGuncelle();
     }
   });
 
@@ -479,12 +523,13 @@ function abonelikleriBaslat() {
     if (veri && Array.isArray(veri)) {
       state.besteler = veri;
       if (state.mod === 'amigo') amigoEkraniGuncelle();
+      else if (state.mod === 'besteler') besteKatalogRender();
     }
   });
 }
 
 // ===== NAVİGASYON =====
-const TUM_EKRANLAR = ['hosgeldin','taraftar-isim','bolge-sec','taraftar','amigo-isim','amigo-sifre','onay-bekle','amigo','qr'];
+const TUM_EKRANLAR = ['hosgeldin','taraftar-isim','bolge-sec','taraftar','besteler','amigo-isim','amigo-sifre','onay-bekle','amigo','qr'];
 
 function tumEkranlariGizle() {
   TUM_EKRANLAR.forEach(id => document.getElementById('ekran-'+id).classList.add('hidden'));
@@ -553,7 +598,7 @@ function bolgeSecimOnayla() {
   if (!state.taraftarBolge) return;
   if (!state.uid) { alert('Bağlantı henüz hazır değil, biraz bekle.'); return; }
   taraftarKaydet();
-  oturumKaydet();   // sayfa yenilemede tribünde kalsın
+  oturumKaydet({ rol: 'taraftar', isim: state.kullaniciIsim, soyisim: state.kullaniciSoyisim, bolge: state.taraftarBolge });
   gidTaraftar();
 }
 
@@ -571,15 +616,8 @@ function taraftarKaydet() {
 }
 
 // ===== OTURUM (sayfa yenilemede hatırla) =====
-function oturumKaydet() {
-  try {
-    localStorage.setItem('tt_oturum', JSON.stringify({
-      rol: 'taraftar',
-      isim: state.kullaniciIsim,
-      soyisim: state.kullaniciSoyisim,
-      bolge: state.taraftarBolge
-    }));
-  } catch(e) {}
+function oturumKaydet(veri) {
+  try { localStorage.setItem('tt_oturum', JSON.stringify(veri)); } catch(e) {}
 }
 function oturumTemizle() {
   try { localStorage.removeItem('tt_oturum'); } catch(e) {}
@@ -587,12 +625,19 @@ function oturumTemizle() {
 function oturumGeriYukle() {
   let o = null;
   try { o = JSON.parse(localStorage.getItem('tt_oturum') || 'null'); } catch(e) {}
-  if (o && o.rol === 'taraftar' && o.bolge) {
-    state.kullaniciIsim = o.isim;
-    state.kullaniciSoyisim = o.soyisim;
+  if (!o) { gidHosgeldin(); return; }
+  state.kullaniciIsim = o.isim;
+  state.kullaniciSoyisim = o.soyisim;
+  if (o.rol === 'taraftar' && o.bolge) {
     state.taraftarBolge = o.bolge;
     state.kullaniciRol = 'taraftar';
     gidTaraftar();      // DB kaydı auth hazır olunca onAuthStateChanged'de tazelenir
+    return;
+  }
+  if (o.rol === 'amigo') {
+    // Onay durumu auth hazır olunca kontrol edilecek (onAuthStateChanged)
+    state.amigoGeriYukleBekliyor = true;
+    gidHosgeldin();
     return;
   }
   gidHosgeldin();
@@ -610,6 +655,8 @@ function gidTaraftar() {
   document.getElementById('ekran-taraftar').classList.remove('hidden');
   document.getElementById('bottom-nav').classList.remove('hidden');
   document.getElementById('mode-badge').textContent = BOLGELER.find(b=>b.id===state.taraftarBolge)?.isim || 'Taraftar';
+  const adSoyad = (state.kullaniciIsim + ' ' + (state.kullaniciSoyisim || '')).trim();
+  document.getElementById('taraftar-kimlik').innerHTML = `👤 ${adSoyad} · <span class="trb">${BOLGELER.find(b=>b.id===state.taraftarBolge)?.isim || ''}</span>`;
   state.mod = 'taraftar';
   state.amigo = false;
   navAktifYap('canli');
@@ -704,6 +751,8 @@ function gidAmigo() {
   document.getElementById('mode-badge').textContent = '🎤 ' + ((state.kullaniciIsim + ' ' + (state.kullaniciSoyisim || '')).trim() || 'Amigo');
   state.mod = 'amigo';
   state.amigo = true;
+  // Sayfa yenilemede amigo oturumu kalsın (taraftar gibi)
+  oturumKaydet({ rol: 'amigo', isim: state.kullaniciIsim, soyisim: state.kullaniciSoyisim });
   navAktifYap('canli');
   amigoEkraniGuncelle();
 }
@@ -812,7 +861,10 @@ function amigoEkraniGuncelle() {
 
   const kontrolEl = document.getElementById('kontrol-butonlar');
   if (!state.caliyor) {
-    kontrolEl.innerHTML = `<button class="ana-btn basla" onclick="amigoBaslat()" ${!state.aktifBeste ? 'disabled style="opacity:.5"' : ''}>▶ Başlat</button>`;
+    const pasif = !state.aktifBeste ? 'disabled style="opacity:.5"' : '';
+    kontrolEl.innerHTML = `
+      <button class="ana-btn basla" onclick="amigoBaslat()" ${pasif}>▶ Sırayla Başlat</button>
+      <button class="ana-btn siradaki" onclick="herkesBirlikte()" ${!state.aktifBeste ? 'disabled style="opacity:.5"' : 'style="background:var(--kirmizi-soluk);color:var(--kirmizi);border:2px solid var(--kirmizi)"'}>🔴 Herkes Birlikte Başlat</button>`;
   } else if (state.herkesAktif) {
     kontrolEl.innerHTML = `
       <button class="ana-btn siradaki" onclick="sirayaDon()">↩ Sıraya dön</button>
@@ -940,7 +992,7 @@ function qrOlustur() {
   document.getElementById('qr-link').textContent = url;
   document.getElementById('qr-kutu').innerHTML = '';
   try {
-    new QRCode(document.getElementById('qr-kutu'), { text: url, width: 200, height: 200, colorDark: '#CC0000', colorLight: '#ffffff' });
+    new QRCode(document.getElementById('qr-kutu'), { text: url, width: 200, height: 200, colorDark: '#000000', colorLight: '#ffffff' });
     qrHazir = true;
   } catch(e) {}
 }
@@ -954,11 +1006,51 @@ function gidQR() {
   qrOlustur();
 }
 
+function linkKopyala() {
+  const url = window.location.href.split('?')[0];
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => alert('Link kopyalandı:\n' + url))
+      .catch(() => prompt('Linki kopyala:', url));
+  } else {
+    prompt('Linki kopyala:', url);
+  }
+}
+
 // ===== NAV =====
 function navGit(hedef) {
   if (hedef === 'qr') { gidQR(); return; }
   if (hedef === 'canli') { state.amigo ? gidAmigo() : gidTaraftar(); return; }
-  if (hedef === 'beste') { if (state.amigo) gidAmigo(); return; }
+  if (hedef === 'beste') { gidBesteler(); return; }   // herkes katalogu görebilir
+}
+
+// ===== BESTE KATALOĞU (herkese açık, salt-okunur) =====
+function gidBesteler() {
+  tumEkranlariGizle();
+  document.getElementById('ekran-besteler').classList.remove('hidden');
+  document.getElementById('bottom-nav').classList.remove('hidden');
+  navAktifYap('beste');
+  state.mod = 'besteler';
+  besteKatalogRender();
+}
+
+function besteKatalogRender() {
+  const el = document.getElementById('besteler-katalog-liste');
+  if (!el) return;
+  if (!state.besteler || !state.besteler.length) {
+    el.innerHTML = '<div class="katalog-bos">Henüz beste eklenmemiş</div>';
+    return;
+  }
+  const etiketler = ['⬅️ Batı Tribün','⬇️ Güney Tribün','➡️ Doğu Tribün','⬆️ Kuzey Tribün','🔴 Herkes (Birlikte)'];
+  el.innerHTML = state.besteler.map(b => `
+    <div class="katalog-kart">
+      <div class="katalog-baslik">${b.isim}</div>
+      ${b.sahipAd ? `<div class="katalog-sahip">🎤 ${b.sahipAd}</div>` : ''}
+      ${(b.sozler || []).map((s, i) => `
+        <div class="katalog-bolum">
+          <div class="katalog-bolum-ad">${etiketler[i] || ('Bölüm ' + (i+1))}</div>
+          <div class="katalog-sozler">${(s || []).map(x => `<div>${x}</div>`).join('')}</div>
+        </div>`).join('')}
+    </div>`).join('');
 }
 
 function navAktifYap(hedef) {
