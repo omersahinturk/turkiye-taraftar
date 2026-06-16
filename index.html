@@ -259,7 +259,7 @@
 
   <!-- BESTE KATALOĞU (herkes görebilir) -->
   <div class="besteler-katalog-screen hidden" id="ekran-besteler">
-    <div class="ekran-baslik">Tüm Besteler · ezberlemek için</div>
+    <div class="ekran-baslik">Tüm Besteler</div>
     <div id="besteler-katalog-liste"></div>
   </div>
 
@@ -797,12 +797,14 @@ function taraftarEkraniGuncelle() {
   }
   // HERKES BİRLİKTE — tüm taraftarlar aynı sözleri söyler
   if (state.herkesAktif) {
-    const sozler = beste.sozler[4] || [];
+    // Herkes Birlikte: tribün fark etmeksizin TÜM bestenin sözleri büyük görünür
+    const tumSozler = (beste.sozler || []).reduce((acc, bolum) => acc.concat(bolum || []), [])
+      .filter(s => s && s !== '...');
     el.innerHTML = `
       <div class="senin-siran-kart">
         <div class="senin-siran-label"><span class="nokta"></span> 🔴 Herkes Birlikte!</div>
         <div class="beste-adi">${beste.isim}</div>
-        <div class="sozler-kutu">${sozler.map(s => `<div class="sozler-satir">${s}</div>`).join('')}</div>
+        <div class="sozler-kutu">${tumSozler.map(s => `<div class="sozler-satir">${s}</div>`).join('')}</div>
       </div>`;
     return;
   }
