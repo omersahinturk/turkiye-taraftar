@@ -325,6 +325,10 @@
         <div class="bolge-form-baslik">⬆️ Kuzey Tribün</div>
         <textarea class="form-input" id="sozler-kuzey" rows="2" placeholder="TÜRKİYE!&#10;TÜRKİYE!"></textarea>
       </div>
+      <div class="bolge-form-grup" style="border:2px solid var(--kirmizi); background:var(--kirmizi-soluk)">
+        <div class="bolge-form-baslik">🔴 Herkes (Birlikte)</div>
+        <textarea class="form-input" id="sozler-herkes" rows="2" placeholder="HEP BİRLİKTE!&#10;TÜRKİYE! TÜRKİYE!"></textarea>
+      </div>
       <button class="kaydet-btn" onclick="besteKaydet()">💾 Kaydet</button>
     </div>
   </div>
@@ -348,6 +352,10 @@
     <button class="nav-btn" id="nav-qr" onclick="navGit('qr')">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>
       QR Paylaş
+    </button>
+    <button class="nav-btn" id="nav-cikis" onclick="oturumKapat()">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Çıkış
     </button>
   </div>
 
@@ -381,6 +389,7 @@ const BESTELER_VARSAYILAN = [{
     ['Kırmızı beyaz!', 'Şampiyon!'],
     ['Vur vuuuur!', 'Gol olsun!'],
     ['TÜRKİYE!', 'TÜRKİYE!'],
+    ['HEP BİRLİKTE!', 'TÜRKİYE! TÜRKİYE!'],
   ]
 }];
 
@@ -399,6 +408,7 @@ let state = {
   besteler: [...BESTELER_VARSAYILAN],
   aktifBeste: null,
   aktifBolgeIdx: -1,
+  herkesAktif: false,
   caliyor: false,
   siralamaBolgeIdx: [0, 1, 2, 3],
   onayDinleyici: null,
@@ -431,6 +441,8 @@ state.auth.onAuthStateChanged(user => {
     state.aboneOlundu = true;
     abonelikleriBaslat();
   }
+  // Sayfa yenilemesiyle taraftar olarak geri yüklendiyse kaydı tazele
+  if (state.mod === 'taraftar') taraftarKaydet();
 });
 
 // Auth tamamlandıktan sonra DB aboneliklerini başlat
@@ -453,6 +465,7 @@ function abonelikleriBaslat() {
       state.caliyor = veri.caliyor || false;
       state.aktifBeste = veri.aktifBeste || null;
       state.aktifBolgeIdx = veri.aktifBolgeIdx !== undefined ? veri.aktifBolgeIdx : -1;
+      state.herkesAktif = veri.herkesAktif || false;
       state.siralamaBolgeIdx = veri.siralamaBolgeIdx || [0,1,2,3];
       if (veri.besteler) state.besteler = veri.besteler;
       taraftarEkraniGuncelle();
@@ -539,7 +552,14 @@ function bolgeKartSec(id) {
 function bolgeSecimOnayla() {
   if (!state.taraftarBolge) return;
   if (!state.uid) { alert('Bağlantı henüz hazır değil, biraz bekle.'); return; }
-  // Firebase'e kaydet — anahtar uid (bir cihaz = bir kayıt)
+  taraftarKaydet();
+  oturumKaydet();   // sayfa yenilemede tribünde kalsın
+  gidTaraftar();
+}
+
+// Taraftarı Firebase'e yaz (anahtar uid: bir cihaz = bir kayıt)
+function taraftarKaydet() {
+  if (!state.uid || !state.taraftarBolge) return;
   state.db.ref('katilimcilar/' + state.uid).set({
     isim: state.kullaniciIsim,
     soyisim: state.kullaniciSoyisim,
@@ -548,7 +568,41 @@ function bolgeSecimOnayla() {
     girisSaati: new Date().toISOString(),
     rol: 'taraftar'
   });
-  gidTaraftar();
+}
+
+// ===== OTURUM (sayfa yenilemede hatırla) =====
+function oturumKaydet() {
+  try {
+    localStorage.setItem('tt_oturum', JSON.stringify({
+      rol: 'taraftar',
+      isim: state.kullaniciIsim,
+      soyisim: state.kullaniciSoyisim,
+      bolge: state.taraftarBolge
+    }));
+  } catch(e) {}
+}
+function oturumTemizle() {
+  try { localStorage.removeItem('tt_oturum'); } catch(e) {}
+}
+function oturumGeriYukle() {
+  let o = null;
+  try { o = JSON.parse(localStorage.getItem('tt_oturum') || 'null'); } catch(e) {}
+  if (o && o.rol === 'taraftar' && o.bolge) {
+    state.kullaniciIsim = o.isim;
+    state.kullaniciSoyisim = o.soyisim;
+    state.taraftarBolge = o.bolge;
+    state.kullaniciRol = 'taraftar';
+    gidTaraftar();      // DB kaydı auth hazır olunca onAuthStateChanged'de tazelenir
+    return;
+  }
+  gidHosgeldin();
+}
+function oturumKapat() {
+  if (!confirm('Çıkış yapılsın mı? Tekrar giriş yapman gerekir.')) return;
+  oturumTemizle();
+  if (state.uid) state.db.ref('katilimcilar/' + state.uid).remove().catch(()=>{});
+  state.taraftarBolge = null;
+  gidHosgeldin();
 }
 
 function gidTaraftar() {
@@ -658,17 +712,23 @@ function gidAmigo() {
 function siraBarGuncelle() {
   const el = document.getElementById('sira-bar');
   if (!state.caliyor) { el.innerHTML = ''; return; }
-  el.innerHTML = state.siralamaBolgeIdx.map((_, i) => {
+  const toplam = state.siralamaBolgeIdx.length + 1; // +Herkes adımı
+  const aktifIdx = state.herkesAktif ? state.siralamaBolgeIdx.length : state.aktifBolgeIdx;
+  let html = '';
+  for (let i = 0; i < toplam; i++) {
     let cls = 'sira-dot';
-    if (i === state.aktifBolgeIdx) cls += ' aktif';
-    else if (i < state.aktifBolgeIdx) cls += ' gecti';
-    return `<div class="${cls}"></div>`;
-  }).join('');
+    if (i === aktifIdx) cls += ' aktif';
+    else if (i < aktifIdx) cls += ' gecti';
+    html += `<div class="${cls}"></div>`;
+  }
+  el.innerHTML = html;
 }
 
 function taraftarEkraniGuncelle() {
   const el = document.getElementById('taraftar-icerik');
-  if (!state.caliyor || state.aktifBolgeIdx < 0 || !state.aktifBeste) {
+  const beste = state.besteler.find(b => b.id === state.aktifBeste);
+  const aktifMi = state.caliyor && state.aktifBeste && beste && (state.herkesAktif || state.aktifBolgeIdx >= 0);
+  if (!aktifMi) {
     el.innerHTML = `
       <div class="bekleme-kart">
         <div class="bekleme-ikon">🎤</div>
@@ -677,8 +737,17 @@ function taraftarEkraniGuncelle() {
       </div>`;
     return;
   }
-  const beste = state.besteler.find(b => b.id === state.aktifBeste);
-  if (!beste) return;
+  // HERKES BİRLİKTE — tüm taraftarlar aynı sözleri söyler
+  if (state.herkesAktif) {
+    const sozler = beste.sozler[4] || [];
+    el.innerHTML = `
+      <div class="senin-siran-kart">
+        <div class="senin-siran-label"><span class="nokta"></span> 🔴 Herkes Birlikte!</div>
+        <div class="beste-adi">${beste.isim}</div>
+        <div class="sozler-kutu">${sozler.map(s => `<div class="sozler-satir">${s}</div>`).join('')}</div>
+      </div>`;
+    return;
+  }
   const aktifBolgeId = BOLGELER[state.siralamaBolgeIdx[state.aktifBolgeIdx]]?.id;
   const bende = aktifBolgeId === state.taraftarBolge;
   const sozler = beste.sozler[state.aktifBolgeIdx] || [];
@@ -718,10 +787,10 @@ function amigoEkraniGuncelle() {
   `).join('');
 
   const bolgeEl = document.getElementById('bolge-sira-liste');
-  bolgeEl.innerHTML = state.siralamaBolgeIdx.map((bi, i) => {
+  let bolgeHtml = state.siralamaBolgeIdx.map((bi, i) => {
     const b = BOLGELER[bi];
-    const aktif = state.caliyor && state.aktifBolgeIdx === i;
-    const gecti = state.caliyor && state.aktifBolgeIdx > i;
+    const aktif = state.caliyor && !state.herkesAktif && state.aktifBolgeIdx === i;
+    const gecti = state.caliyor && (state.herkesAktif || state.aktifBolgeIdx > i);
     return `
       <div class="bolge-sira-item ${aktif ? 'aktif' : gecti ? 'gecti' : ''}">
         <div class="bolge-sira-no">${gecti ? '✓' : i+1}</div>
@@ -730,14 +799,30 @@ function amigoEkraniGuncelle() {
         <div class="bolge-sira-durum">${aktif ? '🎤 Okuyor' : gecti ? 'Bitti' : ''}</div>
       </div>`;
   }).join('');
+  // Herkes (Birlikte) adımı
+  const herkesAktifMi = state.caliyor && state.herkesAktif;
+  bolgeHtml += `
+    <div class="bolge-sira-item ${herkesAktifMi ? 'aktif' : ''}" style="border-color:var(--kirmizi)">
+      <div class="bolge-sira-no">${state.siralamaBolgeIdx.length + 1}</div>
+      <div class="bolge-sira-ikon">🔴</div>
+      <div class="bolge-sira-isim">Herkes (Birlikte)</div>
+      <div class="bolge-sira-durum">${herkesAktifMi ? '🎤 Hep birlikte' : ''}</div>
+    </div>`;
+  bolgeEl.innerHTML = bolgeHtml;
 
   const kontrolEl = document.getElementById('kontrol-butonlar');
   if (!state.caliyor) {
     kontrolEl.innerHTML = `<button class="ana-btn basla" onclick="amigoBaslat()" ${!state.aktifBeste ? 'disabled style="opacity:.5"' : ''}>▶ Başlat</button>`;
+  } else if (state.herkesAktif) {
+    kontrolEl.innerHTML = `
+      <button class="ana-btn siradaki" onclick="sirayaDon()">↩ Sıraya dön</button>
+      <button class="ana-btn dur" onclick="amigoDurdur()">■ Durdur</button>`;
   } else {
     const sonBolge = state.aktifBolgeIdx >= state.siralamaBolgeIdx.length - 1;
+    const sonrakiAd = sonBolge ? '🔴 Herkes Birlikte' : (BOLGELER[state.siralamaBolgeIdx[state.aktifBolgeIdx+1]]?.isim || '');
     kontrolEl.innerHTML = `
-      ${!sonBolge ? `<button class="ana-btn siradaki" onclick="amigoSiradaki()">Sıradaki → ${BOLGELER[state.siralamaBolgeIdx[state.aktifBolgeIdx+1]]?.isim}</button>` : ''}
+      <button class="ana-btn siradaki" onclick="amigoSiradaki()">Sıradaki → ${sonrakiAd}</button>
+      ${!sonBolge ? `<button class="ana-btn siradaki" onclick="herkesBirlikte()" style="background:var(--kirmizi-soluk);color:var(--kirmizi);border:2px solid var(--kirmizi)">🔴 Herkes Birlikte</button>` : ''}
       <button class="ana-btn dur" onclick="amigoDurdur()">■ Durdur</button>`;
   }
 }
@@ -752,21 +837,44 @@ function amigoBaslat() {
   if (!state.aktifBeste) return;
   state.caliyor = true;
   state.aktifBolgeIdx = 0;
+  state.herkesAktif = false;
   amigoDurumYayinla();
   amigoEkraniGuncelle();
 }
 
 function amigoSiradaki() {
+  if (state.herkesAktif) return;
   if (state.aktifBolgeIdx < state.siralamaBolgeIdx.length - 1) {
     state.aktifBolgeIdx++;
-    amigoDurumYayinla();
-    amigoEkraniGuncelle();
-  } else { amigoDurdur(); }
+  } else {
+    // Son bölgeden sonra → Herkes (Birlikte) adımı
+    state.herkesAktif = true;
+  }
+  amigoDurumYayinla();
+  amigoEkraniGuncelle();
+}
+
+// Sıradan bağımsız: istenilen an herkesi birlikte söylet
+function herkesBirlikte() {
+  if (!state.aktifBeste) return;
+  state.caliyor = true;
+  if (state.aktifBolgeIdx < 0) state.aktifBolgeIdx = 0; // sıraya dönüş referansı
+  state.herkesAktif = true;
+  amigoDurumYayinla();
+  amigoEkraniGuncelle();
+}
+
+// Herkes adımından bölge sırasına geri dön
+function sirayaDon() {
+  state.herkesAktif = false;
+  amigoDurumYayinla();
+  amigoEkraniGuncelle();
 }
 
 function amigoDurdur() {
   state.caliyor = false;
   state.aktifBolgeIdx = -1;
+  state.herkesAktif = false;
   amigoDurumYayinla();
   amigoEkraniGuncelle();
 }
@@ -776,6 +884,7 @@ function amigoDurumYayinla() {
     caliyor: state.caliyor,
     aktifBeste: state.aktifBeste,
     aktifBolgeIdx: state.aktifBolgeIdx,
+    herkesAktif: state.herkesAktif,
     siralamaBolgeIdx: state.siralamaBolgeIdx,
     besteler: state.besteler,
     ts: Date.now()
@@ -799,7 +908,7 @@ function besteSilBtn(btn) {
 function modalAc() {
   document.getElementById('beste-modal').classList.remove('hidden');
   document.getElementById('beste-adi-input').value = '';
-  ['bati','guney','dogu','kuzey'].forEach(id => {
+  ['bati','guney','dogu','kuzey','herkes'].forEach(id => {
     document.getElementById('sozler-'+id).value = '';
   });
   setTimeout(() => document.getElementById('beste-adi-input').focus(), 100);
@@ -811,7 +920,7 @@ function modalDisiKapat(e) { if (e.target.id === 'beste-modal') modalKapat(); }
 function besteKaydet() {
   const adi = document.getElementById('beste-adi-input').value.trim();
   if (!adi) { alert('Beste adı boş olamaz!'); return; }
-  const bolgeIdler = ['bati','guney','dogu','kuzey'];
+  const bolgeIdler = ['bati','guney','dogu','kuzey','herkes'];
   const sozler = bolgeIdler.map(id => {
     const val = document.getElementById('sozler-'+id).value.trim();
     return val ? val.split('\n').filter(s => s.trim()) : ['...'];
@@ -862,8 +971,8 @@ function durumGuncelle(tip, yazi) {
   document.getElementById('durum-yazi').textContent = yazi;
 }
 
-// BAŞLAT
-gidHosgeldin();
+// BAŞLAT — kayıtlı oturum varsa tribünde kal, yoksa ana sayfa
+oturumGeriYukle();
 </script>
 </body>
 </html>
