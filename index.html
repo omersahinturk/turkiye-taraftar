@@ -436,6 +436,7 @@ let state = {
   onayDinleyici: null,
   amigoGeriYukleBekliyor: false,
   duzenlenenBesteId: null,
+  herkesGeriDonebilir: false,
 };
 
 // ===== FİREBASE BAŞLAT =====
@@ -876,8 +877,10 @@ function amigoEkraniGuncelle() {
       <button class="ana-btn basla" onclick="amigoBaslat()" ${pasif}>▶ Sırayla Başlat</button>
       <button class="ana-btn siradaki" onclick="herkesBirlikte()" ${!state.aktifBeste ? 'disabled style="opacity:.5"' : 'style="background:var(--kirmizi-soluk);color:var(--kirmizi);border:2px solid var(--kirmizi)"'}>🔴 Herkes Birlikte Başlat</button>`;
   } else if (state.herkesAktif) {
+    // "Sıraya dön" yalnızca Herkes butonla (sıra ortasında) açıldıysa;
+    // sıranın sonunda (Kuzey'den sonra) yalnızca Durdur.
     kontrolEl.innerHTML = `
-      <button class="ana-btn siradaki" onclick="sirayaDon()">↩ Sıraya dön</button>
+      ${state.herkesGeriDonebilir ? `<button class="ana-btn siradaki" onclick="sirayaDon()">↩ Sıraya dön</button>` : ''}
       <button class="ana-btn dur" onclick="amigoDurdur()">■ Durdur</button>`;
   } else {
     const sonBolge = state.aktifBolgeIdx >= state.siralamaBolgeIdx.length - 1;
@@ -900,6 +903,7 @@ function amigoBaslat() {
   state.caliyor = true;
   state.aktifBolgeIdx = 0;
   state.herkesAktif = false;
+  state.herkesGeriDonebilir = false;
   amigoDurumYayinla();
   amigoEkraniGuncelle();
 }
@@ -909,8 +913,9 @@ function amigoSiradaki() {
   if (state.aktifBolgeIdx < state.siralamaBolgeIdx.length - 1) {
     state.aktifBolgeIdx++;
   } else {
-    // Son bölgeden sonra → Herkes (Birlikte) adımı
+    // Son bölgeden sonra → Herkes (Birlikte) adımı (sıra sonu, geri dönülmez)
     state.herkesAktif = true;
+    state.herkesGeriDonebilir = false;
   }
   amigoDurumYayinla();
   amigoEkraniGuncelle();
@@ -919,8 +924,10 @@ function amigoSiradaki() {
 // Sıradan bağımsız: istenilen an herkesi birlikte söylet
 function herkesBirlikte() {
   if (!state.aktifBeste) return;
+  // Aktif bölge rotasyonu sırasında çağrıldıysa sıraya dönülebilir
+  state.herkesGeriDonebilir = (state.caliyor && !state.herkesAktif && state.aktifBolgeIdx >= 0);
   state.caliyor = true;
-  if (state.aktifBolgeIdx < 0) state.aktifBolgeIdx = 0; // sıraya dönüş referansı
+  if (state.aktifBolgeIdx < 0) state.aktifBolgeIdx = 0;
   state.herkesAktif = true;
   amigoDurumYayinla();
   amigoEkraniGuncelle();
@@ -937,6 +944,7 @@ function amigoDurdur() {
   state.caliyor = false;
   state.aktifBolgeIdx = -1;
   state.herkesAktif = false;
+  state.herkesGeriDonebilir = false;
   amigoDurumYayinla();
   amigoEkraniGuncelle();
 }
