@@ -216,6 +216,20 @@ db.ref('.info/connected').on('value', snap => {
   }
 });
 
+// Oturum kalıcı: sayfa yenilense de admin girişi korunur (auth geri yüklenince
+// panel otomatik açılır).
+adminApp.auth().onAuthStateChanged(user => {
+  if (user) paneliGoster();
+});
+
+function paneliGoster() {
+  if (girisYapildi) return;
+  girisYapildi = true;
+  document.getElementById('giris-ekran').classList.add('hidden');
+  document.getElementById('ana-panel').classList.add('aktif');
+  panelBaslat();
+}
+
 // ===== GİRİŞ =====
 function adminGiris() {
   const girilen = document.getElementById('admin-sifre').value;
@@ -223,13 +237,9 @@ function adminGiris() {
   const input = document.getElementById('admin-sifre');
 
   // Şifre config'ten okunmuyor; ayrı 'admin' app örneğiyle Firebase Auth
-  // üzerinden doğrulanıyor (anonim kimliği ezmez).
-  adminApp.auth().signInWithEmailAndPassword(ADMIN_EMAIL, girilen).then(() => {
-    girisYapildi = true;
-    document.getElementById('giris-ekran').classList.add('hidden');
-    document.getElementById('ana-panel').classList.add('aktif');
-    panelBaslat();
-  }).catch(() => {
+  // üzerinden doğrulanıyor (anonim kimliği ezmez). Başarılı girişte paneli
+  // onAuthStateChanged açar.
+  adminApp.auth().signInWithEmailAndPassword(ADMIN_EMAIL, girilen).catch(() => {
     input.classList.add('yanlis');
     hata.textContent = 'Yanlış şifre!';
     setTimeout(() => input.classList.remove('yanlis'), 400);
