@@ -218,9 +218,11 @@
   <!-- 2a. TARAFTAR İSİM GİRİŞ -->
   <div class="isim-giris-screen hidden" id="ekran-taraftar-isim">
     <div class="isim-giris-ikon">👤</div>
-    <div class="isim-giris-baslik">İsmini gir</div>
+    <div class="isim-giris-baslik">Ad ve soyadını gir</div>
     <div class="isim-giris-alt">Amigolar seni tanısın!</div>
     <input class="isim-input" id="taraftar-isim-input" type="text" placeholder="Adın" maxlength="30"
+           onkeydown="if(event.key==='Enter') document.getElementById('taraftar-soyisim-input').focus()">
+    <input class="isim-input" id="taraftar-soyisim-input" type="text" placeholder="Soyadın" maxlength="30"
            onkeydown="if(event.key==='Enter') taraftarIsimDevam()">
     <div class="hata-yazi" id="taraftar-isim-hata"></div>
     <button class="giris-btn" onclick="taraftarIsimDevam()">Devam et →</button>
@@ -244,8 +246,10 @@
   <div class="isim-giris-screen hidden" id="ekran-amigo-isim">
     <div class="isim-giris-ikon">🎤</div>
     <div class="isim-giris-baslik">Amigo Girişi</div>
-    <div class="isim-giris-alt">Önce ismini gir</div>
+    <div class="isim-giris-alt">Önce ad ve soyadını gir</div>
     <input class="isim-input" id="amigo-isim-input" type="text" placeholder="Adın" maxlength="30"
+           onkeydown="if(event.key==='Enter') document.getElementById('amigo-soyisim-input').focus()">
+    <input class="isim-input" id="amigo-soyisim-input" type="text" placeholder="Soyadın" maxlength="30"
            onkeydown="if(event.key==='Enter') amigoIsimDevam()">
     <div class="hata-yazi" id="amigo-isim-hata"></div>
     <button class="giris-btn" onclick="amigoIsimDevam()">Devam et →</button>
@@ -306,20 +310,20 @@
       </div>
       <div class="form-label" style="margin-bottom:-6px">Her bölge için sözler (satır satır yaz)</div>
       <div class="bolge-form-grup">
-        <div class="bolge-form-baslik">🥅 Sol Kale Arkası</div>
-        <textarea class="form-input" id="sozler-sol-kale" rows="2" placeholder="Hadi Türkiye!&#10;Hadi Türkiye!"></textarea>
+        <div class="bolge-form-baslik">⬅️ Batı Tribün</div>
+        <textarea class="form-input" id="sozler-bati" rows="2" placeholder="Hadi Türkiye!&#10;Hadi Türkiye!"></textarea>
       </div>
       <div class="bolge-form-grup">
-        <div class="bolge-form-baslik">⬅️ Sol Orta Tribün</div>
-        <textarea class="form-input" id="sozler-sol-orta" rows="2" placeholder="Kırmızı beyaz!&#10;Şampiyon!"></textarea>
+        <div class="bolge-form-baslik">⬇️ Güney Tribün</div>
+        <textarea class="form-input" id="sozler-guney" rows="2" placeholder="Kırmızı beyaz!&#10;Şampiyon!"></textarea>
       </div>
       <div class="bolge-form-grup">
-        <div class="bolge-form-baslik">➡️ Sağ Orta Tribün</div>
-        <textarea class="form-input" id="sozler-sag-orta" rows="2" placeholder="Vur vuuuur!&#10;Gol olsun!"></textarea>
+        <div class="bolge-form-baslik">➡️ Doğu Tribün</div>
+        <textarea class="form-input" id="sozler-dogu" rows="2" placeholder="Vur vuuuur!&#10;Gol olsun!"></textarea>
       </div>
       <div class="bolge-form-grup">
-        <div class="bolge-form-baslik">🥅 Sağ Kale Arkası</div>
-        <textarea class="form-input" id="sozler-sag-kale" rows="2" placeholder="TÜRKİYE!&#10;TÜRKİYE!"></textarea>
+        <div class="bolge-form-baslik">⬆️ Kuzey Tribün</div>
+        <textarea class="form-input" id="sozler-kuzey" rows="2" placeholder="TÜRKİYE!&#10;TÜRKİYE!"></textarea>
       </div>
       <button class="kaydet-btn" onclick="besteKaydet()">💾 Kaydet</button>
     </div>
@@ -362,10 +366,10 @@ const firebaseConfig = {
 };
 
 const BOLGELER = [
-  { id: 'sol-kale', isim: 'Sol Kale Arkası', ikon: '🥅' },
-  { id: 'sol-orta', isim: 'Sol Orta Tribün', ikon: '⬅️' },
-  { id: 'sag-orta', isim: 'Sağ Orta Tribün', ikon: '➡️' },
-  { id: 'sag-kale', isim: 'Sağ Kale Arkası', ikon: '🥅' },
+  { id: 'bati',  isim: 'Batı Tribün',  ikon: '⬅️' },
+  { id: 'guney', isim: 'Güney Tribün', ikon: '⬇️' },
+  { id: 'dogu',  isim: 'Doğu Tribün',  ikon: '➡️' },
+  { id: 'kuzey', isim: 'Kuzey Tribün', ikon: '⬆️' },
 ];
 
 const BESTELER_VARSAYILAN = [{
@@ -388,6 +392,7 @@ let state = {
   aboneOlundu: false,
   bagliMi: false,
   kullaniciIsim: null,
+  kullaniciSoyisim: null,
   kullaniciRol: null,       // 'taraftar' | 'amigo'
   taraftarBolge: null,
   amigo: false,
@@ -488,8 +493,12 @@ function gidTaraftarIsim() {
 
 function taraftarIsimDevam() {
   const isim = document.getElementById('taraftar-isim-input').value.trim();
-  if (!isim) { document.getElementById('taraftar-isim-hata').textContent = 'İsim boş olamaz!'; return; }
+  const soyisim = document.getElementById('taraftar-soyisim-input').value.trim();
+  const hata = document.getElementById('taraftar-isim-hata');
+  if (!isim) { hata.textContent = 'İsim boş olamaz!'; return; }
+  if (!soyisim) { hata.textContent = 'Soyisim boş olamaz!'; return; }
   state.kullaniciIsim = isim;
+  state.kullaniciSoyisim = soyisim;
   state.kullaniciRol = 'taraftar';
   gidBolgeSec();
 }
@@ -525,6 +534,7 @@ function bolgeSecimOnayla() {
   // Firebase'e kaydet — anahtar uid (bir cihaz = bir kayıt)
   state.db.ref('katilimcilar/' + state.uid).set({
     isim: state.kullaniciIsim,
+    soyisim: state.kullaniciSoyisim,
     bolge: state.taraftarBolge,
     bolgeIsim: BOLGELER.find(b => b.id === state.taraftarBolge)?.isim,
     girisSaati: new Date().toISOString(),
@@ -559,8 +569,12 @@ function gidAmigoIsim() {
 
 function amigoIsimDevam() {
   const isim = document.getElementById('amigo-isim-input').value.trim();
-  if (!isim) { document.getElementById('amigo-isim-hata').textContent = 'İsim boş olamaz!'; return; }
+  const soyisim = document.getElementById('amigo-soyisim-input').value.trim();
+  const hata = document.getElementById('amigo-isim-hata');
+  if (!isim) { hata.textContent = 'İsim boş olamaz!'; return; }
+  if (!soyisim) { hata.textContent = 'Soyisim boş olamaz!'; return; }
   state.kullaniciIsim = isim;
+  state.kullaniciSoyisim = soyisim;
   gidAmigoSifre();
 }
 
@@ -586,6 +600,7 @@ function sifreKontrol() {
   state.amigoFirebaseKey = key;
   state.db.ref('amigolar/' + key).set({
     isim: state.kullaniciIsim,
+    soyisim: state.kullaniciSoyisim,
     durum: 'bekliyor',
     amigoSifre: girilen,
     girisSaati: new Date().toISOString()
@@ -603,7 +618,7 @@ function gidOnayBekle(key) {
   tumEkranlariGizle();
   document.getElementById('ekran-onay-bekle').classList.remove('hidden');
   document.getElementById('mode-badge').textContent = 'Onay Bekleniyor';
-  document.getElementById('onay-isim-goster').textContent = state.kullaniciIsim;
+  document.getElementById('onay-isim-goster').textContent = (state.kullaniciIsim + ' ' + (state.kullaniciSoyisim || '')).trim();
   state.mod = 'onay-bekle';
 
   // Firebase'den onay durumunu dinle
@@ -624,7 +639,7 @@ function gidAmigo() {
   tumEkranlariGizle();
   document.getElementById('ekran-amigo').classList.remove('hidden');
   document.getElementById('bottom-nav').classList.remove('hidden');
-  document.getElementById('mode-badge').textContent = '🎤 ' + (state.kullaniciIsim || 'Amigo');
+  document.getElementById('mode-badge').textContent = '🎤 ' + ((state.kullaniciIsim + ' ' + (state.kullaniciSoyisim || '')).trim() || 'Amigo');
   state.mod = 'amigo';
   state.amigo = true;
   navAktifYap('canli');
@@ -772,7 +787,7 @@ function besteSilBtn(btn) {
 function modalAc() {
   document.getElementById('beste-modal').classList.remove('hidden');
   document.getElementById('beste-adi-input').value = '';
-  ['sol-kale','sol-orta','sag-orta','sag-kale'].forEach(id => {
+  ['bati','guney','dogu','kuzey'].forEach(id => {
     document.getElementById('sozler-'+id).value = '';
   });
   setTimeout(() => document.getElementById('beste-adi-input').focus(), 100);
@@ -784,7 +799,7 @@ function modalDisiKapat(e) { if (e.target.id === 'beste-modal') modalKapat(); }
 function besteKaydet() {
   const adi = document.getElementById('beste-adi-input').value.trim();
   if (!adi) { alert('Beste adı boş olamaz!'); return; }
-  const bolgeIdler = ['sol-kale','sol-orta','sag-orta','sag-kale'];
+  const bolgeIdler = ['bati','guney','dogu','kuzey'];
   const sozler = bolgeIdler.map(id => {
     const val = document.getElementById('sozler-'+id).value.trim();
     return val ? val.split('\n').filter(s => s.trim()) : ['...'];
