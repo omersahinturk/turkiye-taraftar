@@ -679,67 +679,23 @@ function bolgeeDegistir() {
 
 function bolgeSecRender() {
   const el = document.getElementById('bolge-grid-sec');
-  const sec  = (id) => state.taraftarBolge === id;
-  const fill = (id) => sec(id) ? '#CC0000' : '#f2d0d0';
-  const txFl = (id) => sec(id) ? '#fff' : '#555';
-  const chk  = (id, x, y) => sec(id) ? `<circle cx="${x}" cy="${y}" r="10" fill="rgba(255,255,255,0.25)"/><text x="${x}" y="${y+5}" text-anchor="middle" font-size="13" fill="white" font-family="system-ui">✓</text>` : '';
-
+  const kart = (id) => {
+    const b = BOLGELER.find(b => b.id === id);
+    return `<div class="bolge-kart ${state.taraftarBolge === b.id ? 'secili' : ''}" onclick="bolgeKartSec('${b.id}')" style="grid-area:${b.id}">
+      <div class="bolge-kart-ikon">${b.ikon}</div>
+      <div class="bolge-kart-isim">${b.isim}</div>
+    </div>`;
+  };
   el.innerHTML = `
-  <svg viewBox="0 0 320 260" style="width:100%;display:block;touch-action:manipulation" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <clipPath id="sc"><ellipse cx="160" cy="130" rx="148" ry="118"/></clipPath>
-    </defs>
-
-    <!-- Stadium bg -->
-    <ellipse cx="160" cy="130" rx="148" ry="118" fill="#e8e8e8"/>
-
-    <!-- Kuzey -->
-    <rect x="0" y="0" width="320" height="90" clip-path="url(#sc)"
-          fill="${fill('kuzey')}" onclick="bolgeKartSec('kuzey')" style="cursor:pointer"/>
-    <!-- Güney -->
-    <rect x="0" y="170" width="320" height="90" clip-path="url(#sc)"
-          fill="${fill('guney')}" onclick="bolgeKartSec('guney')" style="cursor:pointer"/>
-    <!-- Batı -->
-    <rect x="0" y="90" width="90" height="80" clip-path="url(#sc)"
-          fill="${fill('bati')}" onclick="bolgeKartSec('bati')" style="cursor:pointer"/>
-    <!-- Doğu -->
-    <rect x="230" y="90" width="90" height="80" clip-path="url(#sc)"
-          fill="${fill('dogu')}" onclick="bolgeKartSec('dogu')" style="cursor:pointer"/>
-
-    <!-- Separator lines -->
-    <g clip-path="url(#sc)" stroke="white" stroke-width="2" stroke-linecap="round">
-      <line x1="0" y1="90" x2="320" y2="90"/>
-      <line x1="0" y1="170" x2="320" y2="170"/>
-      <line x1="90" y1="90" x2="90" y2="170"/>
-      <line x1="230" y1="90" x2="230" y2="170"/>
-    </g>
-
-    <!-- Field -->
-    <rect x="90" y="90" width="140" height="80" fill="#2e8b2e"/>
-    <line x1="160" y1="90" x2="160" y2="170" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-    <circle cx="160" cy="130" r="18" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
-    <circle cx="160" cy="130" r="2.5" fill="rgba(255,255,255,0.8)"/>
-    <rect x="90" y="111" width="15" height="38" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-    <rect x="215" y="111" width="15" height="38" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-
-    <!-- Outer border -->
-    <ellipse cx="160" cy="130" rx="148" ry="118" fill="none" stroke="#bbb" stroke-width="2"/>
-
-    <!-- Labels + checkmarks -->
-    <text x="160" y="48" text-anchor="middle" font-size="12" font-weight="800" fill="${txFl('kuzey')}" font-family="system-ui,sans-serif">KUZEY TRİBÜN</text>
-    ${chk('kuzey', 160, 68)}
-
-    <text x="160" y="206" text-anchor="middle" font-size="12" font-weight="800" fill="${txFl('guney')}" font-family="system-ui,sans-serif">GÜNEY TRİBÜN</text>
-    ${chk('guney', 160, 222)}
-
-    <text x="45" y="125" text-anchor="middle" font-size="11" font-weight="800" fill="${txFl('bati')}" font-family="system-ui,sans-serif">BATI</text>
-    <text x="45" y="139" text-anchor="middle" font-size="11" font-weight="800" fill="${txFl('bati')}" font-family="system-ui,sans-serif">TRİBÜN</text>
-    ${chk('bati', 45, 155)}
-
-    <text x="275" y="125" text-anchor="middle" font-size="11" font-weight="800" fill="${txFl('dogu')}" font-family="system-ui,sans-serif">DOĞU</text>
-    <text x="275" y="139" text-anchor="middle" font-size="11" font-weight="800" fill="${txFl('dogu')}" font-family="system-ui,sans-serif">TRİBÜN</text>
-    ${chk('dogu', 275, 155)}
-  </svg>`;
+    ${kart('kuzey')}
+    ${kart('bati')}
+    <div class="stadyum-merkez">
+      <span class="stadyum-merkez-ikon">⚽</span>
+      <span class="stadyum-merkez-yazi">SAHA</span>
+    </div>
+    ${kart('dogu')}
+    ${kart('guney')}
+  `;
 }
 
 function bolgeKartSec(id) {
