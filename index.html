@@ -609,8 +609,10 @@ function abonelikleriBaslat() {
   state.db.ref('canli').on('value', snap => {
     const veri = snap.val();
     if (!veri) return;
-    // baslayanAmigo ve caliyor her modda güncellenir; mod geçişlerinde stale kalmasın
+    // Bu iki alan her modda güncellenir; besteler dinleyicisi veya mod
+    // geçişleri sırasında stale kalmasın.
     state.baslayanAmigo = veri.baslayanAmigo || null;
+    state.caliyor = veri.caliyor || false;
     if (state.mod === 'taraftar') {
       const yeniCaliyor = veri.caliyor || false;
       const ts = veri.ts || 0;
@@ -1063,6 +1065,9 @@ function amigoEkraniGuncelle() {
   const besteEl = document.getElementById('beste-listesi');
   besteEl.innerHTML = state.besteler.map(b => {
     const benim = b.sahip && b.sahip === state.uid;
+    // Yayın yokken VE bu amigo sahibiyken edit/sil göster.
+    // baslayanAmigo kontrolü, state.caliyor stale kaldığı durumlar için ek güvence.
+    const duzenlenebilir = !state.caliyor && !state.baslayanAmigo && benim;
     return `
     <div class="beste-item ${state.aktifBeste === b.id ? 'secili' : ''}" onclick="amigoBesteeSec('${b.id}')">
       <div>
@@ -1071,7 +1076,7 @@ function amigoEkraniGuncelle() {
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         ${state.aktifBeste === b.id ? '<span class="beste-check">✓</span>' : ''}
-        ${(!state.caliyor && benim) ? `<button class="beste-sil-btn" onclick="event.stopPropagation();modalDuzenle('${b.id}')">✏️</button><button class="beste-sil-btn" onclick="event.stopPropagation();besteSil('${b.id}')">🗑</button>` : ''}
+        ${duzenlenebilir ? `<button class="beste-sil-btn" onclick="event.stopPropagation();modalDuzenle('${b.id}')">✏️</button><button class="beste-sil-btn" onclick="event.stopPropagation();besteSil('${b.id}')">🗑</button>` : ''}
       </div>
     </div>`;
   }).join('');
