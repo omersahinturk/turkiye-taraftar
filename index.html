@@ -71,13 +71,37 @@
   /* BÖLGE SEÇİM */
   .bolge-sec-screen { flex: 1; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
   .ekran-baslik { font-size: 13px; font-weight: 600; color: var(--gri-400); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
-  .bolge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .bolge-kart { border: 2px solid var(--gri-200); border-radius: 14px; padding: 20px 12px; text-align: center; cursor: pointer; transition: all 0.15s; background: var(--beyaz); }
+  .stadyum-grid {
+    display: grid;
+    grid-template-areas: ". kuzey ." "bati merkez dogu" ". guney .";
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 8px;
+  }
+  .bolge-kart { border: 2px solid var(--gri-200); border-radius: 12px; padding: 14px 8px; text-align: center; cursor: pointer; transition: all 0.15s; background: var(--beyaz); }
   .bolge-kart:active { transform: scale(0.96); }
   .bolge-kart.secili { border-color: var(--kirmizi); background: var(--kirmizi-soluk); }
-  .bolge-kart-ikon { font-size: 32px; margin-bottom: 8px; }
-  .bolge-kart-isim { font-size: 13px; font-weight: 600; color: var(--gri-700); line-height: 1.3; }
+  .bolge-kart-ikon { font-size: 26px; margin-bottom: 6px; }
+  .bolge-kart-isim { font-size: 12px; font-weight: 600; color: var(--gri-700); line-height: 1.3; }
   .bolge-kart.secili .bolge-kart-isim { color: var(--kirmizi); }
+  .stadyum-merkez {
+    grid-area: merkez;
+    background: #2d8a2d;
+    border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    min-height: 90px; position: relative; overflow: hidden;
+  }
+  .stadyum-merkez::before {
+    content: ''; position: absolute;
+    width: 54px; height: 54px;
+    border: 2px solid rgba(255,255,255,0.3); border-radius: 50%;
+  }
+  .stadyum-merkez::after {
+    content: ''; position: absolute; inset: 8px;
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+  }
+  .stadyum-merkez-ikon { font-size: 20px; position: relative; z-index: 1; }
+  .stadyum-merkez-yazi { color: rgba(255,255,255,0.85); font-size: 10px; font-weight: 700; letter-spacing: 0.06em; position: relative; z-index: 1; }
   .devam-btn { padding: 16px; background: var(--kirmizi); color: white; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; margin-top: auto; }
   .devam-btn:disabled { background: var(--gri-200); color: var(--gri-400); }
 
@@ -252,8 +276,9 @@
 
   <!-- 2b. TARAFTAR BÖLGE SEÇ -->
   <div class="bolge-sec-screen hidden" id="ekran-bolge-sec">
-    <div class="ekran-baslik">Bulunduğun bölgeyi seç</div>
-    <div class="bolge-grid" id="bolge-grid-sec"></div>
+    <div class="ekran-baslik">Hangi tribündesin?</div>
+    <div style="font-size:12px;color:var(--gri-400);text-align:center;margin-top:-6px">Sahaya göre oturduğun yönü seç</div>
+    <div class="stadyum-grid" id="bolge-grid-sec"></div>
     <button class="devam-btn" id="devam-btn" onclick="bolgeSecimOnayla()" disabled>Devam et →</button>
     <button class="geri-btn" onclick="bolgeSecGeri()" style="margin-top:4px">← Geri dön</button>
   </div>
@@ -654,12 +679,23 @@ function bolgeeDegistir() {
 
 function bolgeSecRender() {
   const el = document.getElementById('bolge-grid-sec');
-  el.innerHTML = BOLGELER.map(b => `
-    <div class="bolge-kart ${state.taraftarBolge === b.id ? 'secili' : ''}" onclick="bolgeKartSec('${b.id}')">
+  const kart = (id) => {
+    const b = BOLGELER.find(b => b.id === id);
+    return `<div class="bolge-kart ${state.taraftarBolge === b.id ? 'secili' : ''}" onclick="bolgeKartSec('${b.id}')" style="grid-area:${b.id}">
       <div class="bolge-kart-ikon">${b.ikon}</div>
       <div class="bolge-kart-isim">${b.isim}</div>
+    </div>`;
+  };
+  el.innerHTML = `
+    ${kart('kuzey')}
+    ${kart('bati')}
+    <div class="stadyum-merkez">
+      <span class="stadyum-merkez-ikon">⚽</span>
+      <span class="stadyum-merkez-yazi">SAHA</span>
     </div>
-  `).join('');
+    ${kart('dogu')}
+    ${kart('guney')}
+  `;
 }
 
 function bolgeKartSec(id) {
