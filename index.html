@@ -218,6 +218,34 @@
   .tur-btn.secili { border-color: var(--kirmizi); background: var(--kirmizi-soluk); color: var(--kirmizi); }
 
   .hidden { display: none !important; }
+
+  /* BİLDİRİM & GERİ SAYIM */
+  .bildirim-overlay {
+    position: fixed;
+    top: 0; right: 0; bottom: 0; left: 0;
+    z-index: 300;
+    background: rgba(0,0,0,0.93);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1.2rem; padding: 2rem; text-align: center;
+    -webkit-animation: belirGiris 0.35s ease;
+    animation: belirGiris 0.35s ease;
+  }
+  @-webkit-keyframes belirGiris { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes belirGiris { from { opacity: 0; } to { opacity: 1; } }
+  .bildirim-ust { color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; }
+  .bildirim-beste-adi { color: white; font-size: 22px; font-weight: 800; }
+  .geri-sayim-rakam {
+    font-size: 128px; font-weight: 900; color: var(--kirmizi);
+    line-height: 1; min-width: 2ch; text-align: center;
+    text-shadow: 0 0 40px rgba(204,0,0,0.5);
+  }
+  .bildirim-alt { color: rgba(255,255,255,0.45); font-size: 14px; font-weight: 500; }
+  .bildirim-atla-btn {
+    margin-top: 1rem; padding: 10px 24px;
+    background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6);
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 20px;
+    font-size: 13px; cursor: pointer; font-family: var(--font);
+  }
 </style>
 </head>
 <body>
@@ -421,6 +449,15 @@
     </div>
   </div>
 
+  <!-- BİLDİRİM & GERİ SAYIM OVERLAY -->
+  <div class="bildirim-overlay hidden" id="bildirim-overlay">
+    <div class="bildirim-ust">🎵 Beste Başlıyor!</div>
+    <div class="bildirim-beste-adi" id="bildirim-beste-adi"></div>
+    <div class="geri-sayim-rakam" id="geri-sayim-rakam">30</div>
+    <div class="bildirim-alt">saniye içinde başlıyor</div>
+    <button class="bildirim-atla-btn" onclick="geriSayimIptal()">Atla →</button>
+  </div>
+
   <!-- DURUM ÇUBUĞU -->
   <div class="durum-bar" id="durum-bar">
     <span><span class="durum-dot bekle" id="durum-dot"></span><span id="durum-yazi">Bağlanıyor...</span></span>
@@ -510,6 +547,7 @@ let state = {
   duzenlenenBesteId: null,
   yeniBesteTur: 'sirali',
   herkesTumu: false,
+  baslayanAmigo: null,
 };
 
 // ===== FİREBASE BAŞLAT =====
@@ -571,8 +609,24 @@ function abonelikleriBaslat() {
   state.db.ref('canli').on('value', snap => {
     const veri = snap.val();
     if (!veri) return;
+    // baslayanAmigo ve caliyor her modda güncellenir; mod geçişlerinde stale kalmasın
+    state.baslayanAmigo = veri.baslayanAmigo || null;
     if (state.mod === 'taraftar') {
-      state.caliyor = veri.caliyor || false;
+      const yeniCaliyor = veri.caliyor || false;
+      const ts = veri.ts || 0;
+      if (!yeniCaliyor) {
+        geriSayimIptal();
+        _sonBildirimTs = 0;
+      } else if (ts > _sonBildirimTs) {
+        _sonBildirimTs = ts;
+        const gecenSn = Math.floor((Date.now() - ts) / 1000);
+        if (gecenSn < 30) {
+          if (veri.besteler) state.besteler = veri.besteler;
+          const beste = state.besteler.find(b => b.id === (veri.aktifBeste || null));
+          bildirimGoster(beste?.isim || 'Beste', 30 - gecenSn);
+        }
+      }
+      state.caliyor = yeniCaliyor;
       state.aktifBeste = veri.aktifBeste || null;
       state.aktifBolgeIdx = veri.aktifBolgeIdx !== undefined ? veri.aktifBolgeIdx : -1;
       state.herkesAktif = veri.herkesAktif || false;
@@ -581,15 +635,20 @@ function abonelikleriBaslat() {
       if (veri.besteler) state.besteler = veri.besteler;
       taraftarEkraniGuncelle();
       siraBarGuncelle();
-    } else if (state.mod === 'amigo' && veri.caliyor) {
-      // Amigo yenilemeden sonra aktif yayını sürdürsün (seçim aşamasını bozma)
-      state.caliyor = true;
-      state.aktifBeste = veri.aktifBeste || state.aktifBeste;
-      state.aktifBolgeIdx = veri.aktifBolgeIdx !== undefined ? veri.aktifBolgeIdx : -1;
-      state.herkesAktif = veri.herkesAktif || false;
-      state.herkesTumu = veri.herkesTumu || false;
-      state.siralamaBolgeIdx = veri.siralamaBolgeIdx || [0,1,2,3];
-      if (veri.besteler) state.besteler = veri.besteler;
+    } else if (state.mod === 'amigo') {
+      if (veri.caliyor) {
+        // Aktif yayın var: tüm durumu senkronize et
+        state.caliyor = true;
+        state.aktifBeste = veri.aktifBeste || state.aktifBeste;
+        state.aktifBolgeIdx = veri.aktifBolgeIdx !== undefined ? veri.aktifBolgeIdx : -1;
+        state.herkesAktif = veri.herkesAktif || false;
+        state.herkesTumu = veri.herkesTumu || false;
+        state.siralamaBolgeIdx = veri.siralamaBolgeIdx || [0,1,2,3];
+        if (veri.besteler) state.besteler = veri.besteler;
+      } else {
+        // Yayın bitti: sadece yayın durumunu sıfırla, lokal beste seçimini koru
+        state.caliyor = false;
+      }
       amigoEkraniGuncelle();
     }
   });
@@ -910,7 +969,25 @@ function gidAmigo() {
   const isimKey = isimAnahtar(state.kullaniciIsim, state.kullaniciSoyisim || '');
   state.db.ref('isimler/' + isimKey).set({ uid: state.uid, rol: 'amigo' }).catch(() => {});
   navAktifYap('canli');
-  amigoEkraniGuncelle();
+  // Amigo paneline her girilişte mevcut yayın durumunu Firebase'den tazele;
+  // dinleyicinin farklı bir modda olduğu sırada tetiklenip state'i güncelleyemediği
+  // durumları (onay-bekle → amigo geçişi vb.) kapsar.
+  state.db.ref('canli').get().then(snap => {
+    const veri = snap.val();
+    if (veri) {
+      state.baslayanAmigo = veri.baslayanAmigo || null;
+      state.caliyor = veri.caliyor || false;
+      if (veri.caliyor) {
+        state.aktifBeste = veri.aktifBeste || state.aktifBeste;
+        state.aktifBolgeIdx = veri.aktifBolgeIdx !== undefined ? veri.aktifBolgeIdx : -1;
+        state.herkesAktif = veri.herkesAktif || false;
+        state.herkesTumu = veri.herkesTumu || false;
+        state.siralamaBolgeIdx = veri.siralamaBolgeIdx || [0,1,2,3];
+        if (veri.besteler) state.besteler = veri.besteler;
+      }
+    }
+    amigoEkraniGuncelle();
+  }).catch(() => amigoEkraniGuncelle());
 }
 
 // ===== TARAFTAR EKRANI =====
@@ -1038,6 +1115,7 @@ function amigoEkraniGuncelle() {
 
   const herkesBtn = `<button class="ana-btn siradaki" onclick="herkesBaslat()" style="background:var(--kirmizi-soluk);color:var(--kirmizi);border:2px solid var(--kirmizi)">🔴 Herkes Birlikte Başlat</button>`;
   const kontrolEl = document.getElementById('kontrol-butonlar');
+  const benimBaslattim = !state.baslayanAmigo || state.baslayanAmigo === state.uid;
   if (!state.caliyor) {
     if (!state.aktifBeste) {
       kontrolEl.innerHTML = `<button class="ana-btn basla" disabled style="opacity:.5">▶ Başlat</button>`;
@@ -1048,6 +1126,9 @@ function amigoEkraniGuncelle() {
       // Sıralı beste: yalnızca sırayla başlat
       kontrolEl.innerHTML = `<button class="ana-btn basla" onclick="amigoBaslat()">▶ Sırayla Başlat</button>`;
     }
+  } else if (!benimBaslattim) {
+    // Başka amigo yayında: bu amigo başlatamaz, durduramaz
+    kontrolEl.innerHTML = `<div style="padding:14px;background:var(--gri-100);border-radius:14px;font-size:14px;color:var(--gri-400);text-align:center;font-weight:600">🎤 Başka amigo yayında — durdurması bekleniyor</div>`;
   } else if (state.herkesAktif) {
     kontrolEl.innerHTML = `<button class="ana-btn dur" onclick="amigoDurdur()">■ Durdur</button>`;
   } else {
@@ -1069,10 +1150,12 @@ function amigoBesteeSec(id) {
 // SIRALI beste: tribün tribün başlat
 function amigoBaslat() {
   if (!state.aktifBeste) return;
+  if (state.caliyor && state.baslayanAmigo !== state.uid) return;
   state.caliyor = true;
   state.aktifBolgeIdx = 0;
   state.herkesAktif = false;
   state.herkesTumu = false;
+  state.baslayanAmigo = state.uid;
   amigoDurumYayinla();
   amigoEkraniGuncelle();
 }
@@ -1093,19 +1176,23 @@ function amigoSiradaki() {
 // Herkes Birlikte Başlat: tüm beste büyük, herkese (sıralamayı atlar)
 function herkesBaslat() {
   if (!state.aktifBeste) return;
+  if (state.caliyor && state.baslayanAmigo !== state.uid) return;
   state.caliyor = true;
   state.aktifBolgeIdx = 0;
   state.herkesAktif = true;
   state.herkesTumu = true;
+  state.baslayanAmigo = state.uid;
   amigoDurumYayinla();
   amigoEkraniGuncelle();
 }
 
 function amigoDurdur() {
+  if (state.baslayanAmigo && state.baslayanAmigo !== state.uid) return;
   state.caliyor = false;
   state.aktifBolgeIdx = -1;
   state.herkesAktif = false;
   state.herkesTumu = false;
+  state.baslayanAmigo = null;
   amigoDurumYayinla();
   amigoEkraniGuncelle();
 }
@@ -1119,6 +1206,7 @@ function amigoDurumYayinla() {
     herkesTumu: state.herkesTumu,
     siralamaBolgeIdx: state.siralamaBolgeIdx,
     besteler: state.besteler,
+    baslayanAmigo: state.caliyor ? state.uid : null,
     ts: Date.now()
   }).catch(err => {
     // Yetki reddi = onaylı amigo değilsin ya da oturumun değişti (örn. aynı
@@ -1303,6 +1391,59 @@ function durumGuncelle(tip, yazi) {
 function infoAc() { document.getElementById('info-modal').classList.remove('hidden'); }
 function infoKapat() { document.getElementById('info-modal').classList.add('hidden'); }
 function infoDisiKapat(e) { if (e.target.id === 'info-modal') infoKapat(); }
+
+// ===== BİLDİRİM & GERİ SAYIM =====
+let _geriSayimTimer = null;
+let _sonBildirimTs = 0;
+
+function bildirimGoster(besteAdi, baslangic = 30) {
+  if (navigator.vibrate) navigator.vibrate([400, 100, 400, 100, 400]);
+  bildirimSesCaldir();
+  // Titreşim hissedildikten sonra overlay aç
+  setTimeout(() => {
+    document.getElementById('bildirim-beste-adi').textContent = besteAdi;
+    document.getElementById('bildirim-overlay').classList.remove('hidden');
+    geriSayimBaslat(baslangic);
+  }, 500);
+}
+
+function bildirimSesCaldir() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [[0, 660], [0.25, 880], [0.5, 1100]].forEach(([t, hz]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = hz;
+      gain.gain.setValueAtTime(0.4, ctx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.2);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + 0.25);
+    });
+  } catch(e) {}
+}
+
+function geriSayimBaslat(baslangic = 30) {
+  if (_geriSayimTimer) clearInterval(_geriSayimTimer);
+  let kalan = baslangic;
+  document.getElementById('geri-sayim-rakam').textContent = kalan;
+  _geriSayimTimer = setInterval(() => {
+    kalan--;
+    document.getElementById('geri-sayim-rakam').textContent = kalan;
+    if (kalan <= 0) {
+      clearInterval(_geriSayimTimer);
+      _geriSayimTimer = null;
+      document.getElementById('bildirim-overlay').classList.add('hidden');
+    }
+  }, 1000);
+}
+
+function geriSayimIptal() {
+  if (_geriSayimTimer) { clearInterval(_geriSayimTimer); _geriSayimTimer = null; }
+  document.getElementById('bildirim-overlay').classList.add('hidden');
+}
 
 // BAŞLAT — kayıtlı oturum varsa tribünde kal, yoksa ana sayfa
 oturumGeriYukle();
