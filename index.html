@@ -376,6 +376,24 @@
     </div>
   </div>
 
+  <!-- BİLGİ MODALİ -->
+  <div class="modal-overlay hidden" id="info-modal" onclick="infoDisiKapat(event)">
+    <div class="modal-kart">
+      <div class="modal-baslik">
+        <span>📱 Nasıl Kullanılır?</span>
+        <button class="modal-kapat" onclick="infoKapat()">✕</button>
+      </div>
+      <div style="font-size:14px;color:var(--gri-700);line-height:1.8;display:flex;flex-direction:column;gap:10px">
+        <div><strong>1. Giriş:</strong> Taraftar'ı seç, adını ve soyadını gir, ardından bulunduğun tribünü seç.</div>
+        <div><strong>2. Bekleme:</strong> Amigo yayın başlatana kadar "Amigo bekleniyor…" ekranı görürsün.</div>
+        <div><strong>3. Sırayla Beste:</strong> Her tribün sırayla söyler. Kendi sıran gelince kırmızı ekran belirir, sözler büyük yazıyla gösterilir.</div>
+        <div><strong>4. Herkes Birlikte:</strong> Tüm taraftarlar aynı anda aynı sözleri görür ve hep birlikte söyler.</div>
+        <div><strong>5. Besteler:</strong> Besteler sekmesinden tüm besteleri önceden inceleyebilirsin.</div>
+        <div><strong>6. QR Paylaş:</strong> Uygulamanın linkini diğer taraftarlara iletmek için QR kodunu tarat veya linki kopyala.</div>
+      </div>
+    </div>
+  </div>
+
   <!-- DURUM ÇUBUĞU -->
   <div class="durum-bar" id="durum-bar">
     <span><span class="durum-dot bekle" id="durum-dot"></span><span id="durum-yazi">Bağlanıyor...</span></span>
@@ -395,6 +413,10 @@
     <button class="nav-btn" id="nav-qr" onclick="navGit('qr')">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>
       QR Paylaş
+    </button>
+    <button class="nav-btn" id="nav-info" onclick="infoAc()">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      Bilgi
     </button>
     <button class="nav-btn" id="nav-cikis" onclick="oturumKapat()">
       <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -923,8 +945,8 @@ function amigoEkraniGuncelle() {
       // Herkes türü beste: yalnızca herkes birlikte
       kontrolEl.innerHTML = herkesBtn;
     } else {
-      // Sıralı beste: iki seçenek birden
-      kontrolEl.innerHTML = `<button class="ana-btn basla" onclick="amigoBaslat()">▶ Sırayla Başlat</button>${herkesBtn}`;
+      // Sıralı beste: yalnızca sırayla başlat
+      kontrolEl.innerHTML = `<button class="ana-btn basla" onclick="amigoBaslat()">▶ Sırayla Başlat</button>`;
     }
   } else if (state.herkesAktif) {
     kontrolEl.innerHTML = `<button class="ana-btn dur" onclick="amigoDurdur()">■ Durdur</button>`;
@@ -1176,6 +1198,11 @@ function durumGuncelle(tip, yazi) {
   document.getElementById('durum-dot').className = 'durum-dot ' + tip;
   document.getElementById('durum-yazi').textContent = yazi;
 }
+
+// ===== BİLGİ MODALİ =====
+function infoAc() { document.getElementById('info-modal').classList.remove('hidden'); }
+function infoKapat() { document.getElementById('info-modal').classList.add('hidden'); }
+function infoDisiKapat(e) { if (e.target.id === 'info-modal') infoKapat(); }
 
 // BAŞLAT — kayıtlı oturum varsa tribünde kal, yoksa ana sayfa
 oturumGeriYukle();
