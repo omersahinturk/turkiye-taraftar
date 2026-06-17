@@ -173,8 +173,9 @@
   .kaydet-btn { padding: 16px; background: var(--kirmizi); color: white; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 4px; }
 
   /* TARAFTAR KİMLİK */
-  .taraftar-kimlik { background: var(--kirmizi-soluk); border: 1px solid var(--gri-200); border-radius: 12px; padding: 10px 14px; font-size: 14px; font-weight: 600; color: var(--gri-700); text-align: center; }
+  .taraftar-kimlik { background: var(--kirmizi-soluk); border: 1px solid var(--gri-200); border-radius: 12px; padding: 10px 14px; font-size: 14px; font-weight: 600; color: var(--gri-700); display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
   .taraftar-kimlik .trb { color: var(--kirmizi); }
+  .bolge-degistir-btn { background: none; border: 1px solid var(--kirmizi); color: var(--kirmizi); border-radius: 8px; padding: 2px 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font); flex-shrink: 0; }
 
   /* BESTE KATALOĞU */
   .besteler-katalog-screen { flex: 1; display: flex; flex-direction: column; padding: 1.25rem; gap: 1rem; overflow-y: auto; }
@@ -254,6 +255,7 @@
     <div class="ekran-baslik">Bulunduğun bölgeyi seç</div>
     <div class="bolge-grid" id="bolge-grid-sec"></div>
     <button class="devam-btn" id="devam-btn" onclick="bolgeSecimOnayla()" disabled>Devam et →</button>
+    <button class="geri-btn" onclick="bolgeSecGeri()" style="margin-top:4px">← Geri dön</button>
   </div>
 
   <!-- 3. TARAFTAR EKRANI -->
@@ -461,6 +463,7 @@ const BESTELER_VARSAYILAN = [{
 
 let state = {
   mod: 'hosgeldin',
+  bolgeSecKaynak: null,
   db: null,
   auth: null,
   uid: null,
@@ -632,6 +635,21 @@ function gidBolgeSec() {
   document.getElementById('mode-badge').textContent = 'Bölge Seç';
   state.mod = 'bolge-sec';
   bolgeSecRender();
+  document.getElementById('devam-btn').disabled = !state.taraftarBolge;
+}
+
+function bolgeSecGeri() {
+  if (state.bolgeSecKaynak === 'taraftar') {
+    state.bolgeSecKaynak = null;
+    gidTaraftar();
+  } else {
+    gidTaraftarIsim();
+  }
+}
+
+function bolgeeDegistir() {
+  state.bolgeSecKaynak = 'taraftar';
+  gidBolgeSec();
 }
 
 function bolgeSecRender() {
@@ -712,7 +730,7 @@ function gidTaraftar() {
   document.getElementById('bottom-nav').classList.remove('hidden');
   document.getElementById('mode-badge').textContent = BOLGELER.find(b=>b.id===state.taraftarBolge)?.isim || 'Taraftar';
   const adSoyad = (state.kullaniciIsim + ' ' + (state.kullaniciSoyisim || '')).trim();
-  document.getElementById('taraftar-kimlik').innerHTML = `👤 ${adSoyad} · <span class="trb">${BOLGELER.find(b=>b.id===state.taraftarBolge)?.isim || ''}</span>`;
+  document.getElementById('taraftar-kimlik').innerHTML = `👤 ${adSoyad} · <span class="trb">${BOLGELER.find(b=>b.id===state.taraftarBolge)?.isim || ''}</span><button class="bolge-degistir-btn" onclick="bolgeeDegistir()">✏️ değiştir</button>`;
   state.mod = 'taraftar';
   state.amigo = false;
   navAktifYap('canli');
