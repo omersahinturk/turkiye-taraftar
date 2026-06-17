@@ -37,6 +37,13 @@
         ".write": "auth != null && (auth.uid === $uid || auth.uid === 'fys1pLjvIKg85t4CHlMDaX6zf303')",
         ".validate": "newData.hasChildren(['isim', 'bolge'])"
       }
+    },
+
+    "isimler": {
+      ".read": "auth != null",
+      "$key": {
+        ".write": "auth != null && (!data.exists() || data.child('uid').val() === auth.uid)"
+      }
     }
   }
 }

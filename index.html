@@ -270,7 +270,7 @@
     <input class="isim-input" id="taraftar-soyisim-input" type="text" placeholder="Soyadın" maxlength="30"
            onkeydown="if(event.key==='Enter') taraftarIsimDevam()">
     <div class="hata-yazi" id="taraftar-isim-hata"></div>
-    <button class="giris-btn" onclick="taraftarIsimDevam()">Devam et →</button>
+    <button class="giris-btn" id="taraftar-isim-btn" onclick="taraftarIsimDevam()">Devam et →</button>
     <button class="geri-btn" onclick="gidHosgeldin()">← Geri dön</button>
   </div>
 
@@ -306,7 +306,7 @@
     <input class="isim-input" id="amigo-soyisim-input" type="text" placeholder="Soyadın" maxlength="30"
            onkeydown="if(event.key==='Enter') amigoIsimDevam()">
     <div class="hata-yazi" id="amigo-isim-hata"></div>
-    <button class="giris-btn" onclick="amigoIsimDevam()">Devam et →</button>
+    <button class="giris-btn" id="amigo-isim-btn" onclick="amigoIsimDevam()">Devam et →</button>
     <button class="geri-btn" onclick="gidHosgeldin()">← Geri dön</button>
   </div>
 
@@ -641,12 +641,38 @@ function gidTaraftarIsim() {
   setTimeout(() => document.getElementById('taraftar-isim-input').focus(), 100);
 }
 
-function taraftarIsimDevam() {
+function isimAnahtar(isim, soyisim) {
+  const norm = s => s.toLowerCase()
+    .replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s')
+    .replace(/ı/g,'i').replace(/ö/g,'o').replace(/ç/g,'c')
+    .replace(/[^a-z0-9]/g,'_');
+  return norm(isim.trim()) + '__' + norm((soyisim || '').trim());
+}
+
+async function isimKullanildaMi(isim, soyisim) {
+  const key = isimAnahtar(isim, soyisim);
+  const snap = await state.db.ref('isimler/' + key).get();
+  if (!snap.exists()) return false;
+  return snap.val().uid !== state.uid;
+}
+
+async function taraftarIsimDevam() {
   const isim = document.getElementById('taraftar-isim-input').value.trim();
   const soyisim = document.getElementById('taraftar-soyisim-input').value.trim();
   const hata = document.getElementById('taraftar-isim-hata');
+  const btn = document.getElementById('taraftar-isim-btn');
   if (!isim) { hata.textContent = 'İsim boş olamaz!'; return; }
   if (!soyisim) { hata.textContent = 'Soyisim boş olamaz!'; return; }
+  if (!state.uid) { hata.textContent = 'Bağlantı henüz hazır, biraz bekle.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Kontrol ediliyor…';
+  try {
+    if (await isimKullanildaMi(isim, soyisim)) {
+      hata.textContent = 'Bu isim soyisim daha önce kullanıldı!';
+      btn.disabled = false; btn.textContent = 'Devam et →'; return;
+    }
+  } catch(e) { /* okuma hatası → yine de devam et */ }
+  btn.disabled = false; btn.textContent = 'Devam et →';
   state.kullaniciIsim = isim;
   state.kullaniciSoyisim = soyisim;
   state.kullaniciRol = 'taraftar';
@@ -723,6 +749,8 @@ function taraftarKaydet() {
     girisSaati: new Date().toISOString(),
     rol: 'taraftar'
   });
+  const key = isimAnahtar(state.kullaniciIsim, state.kullaniciSoyisim || '');
+  state.db.ref('isimler/' + key).set({ uid: state.uid, rol: 'taraftar' }).catch(() => {});
 }
 
 // ===== OTURUM (sayfa yenilemede hatırla) =====
@@ -755,7 +783,13 @@ function oturumGeriYukle() {
 function oturumKapat() {
   if (!confirm('Çıkış yapılsın mı? Tekrar giriş yapman gerekir.')) return;
   oturumTemizle();
-  if (state.uid) state.db.ref('katilimcilar/' + state.uid).remove().catch(()=>{});
+  if (state.uid) {
+    state.db.ref('katilimcilar/' + state.uid).remove().catch(() => {});
+    if (state.kullaniciIsim) {
+      const key = isimAnahtar(state.kullaniciIsim, state.kullaniciSoyisim || '');
+      state.db.ref('isimler/' + key).remove().catch(() => {});
+    }
+  }
   state.taraftarBolge = null;
   gidHosgeldin();
 }
@@ -786,12 +820,23 @@ function gidAmigoIsim() {
   setTimeout(() => document.getElementById('amigo-isim-input').focus(), 100);
 }
 
-function amigoIsimDevam() {
+async function amigoIsimDevam() {
   const isim = document.getElementById('amigo-isim-input').value.trim();
   const soyisim = document.getElementById('amigo-soyisim-input').value.trim();
   const hata = document.getElementById('amigo-isim-hata');
+  const btn = document.getElementById('amigo-isim-btn');
   if (!isim) { hata.textContent = 'İsim boş olamaz!'; return; }
   if (!soyisim) { hata.textContent = 'Soyisim boş olamaz!'; return; }
+  if (!state.uid) { hata.textContent = 'Bağlantı henüz hazır, biraz bekle.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Kontrol ediliyor…';
+  try {
+    if (await isimKullanildaMi(isim, soyisim)) {
+      hata.textContent = 'Bu isim soyisim daha önce kullanıldı!';
+      btn.disabled = false; btn.textContent = 'Devam et →'; return;
+    }
+  } catch(e) { /* okuma hatası → yine de devam et */ }
+  btn.disabled = false; btn.textContent = 'Devam et →';
   state.kullaniciIsim = isim;
   state.kullaniciSoyisim = soyisim;
   gidAmigoSifre();
@@ -861,8 +906,9 @@ function gidAmigo() {
   document.getElementById('mode-badge').textContent = '🎤 ' + ((state.kullaniciIsim + ' ' + (state.kullaniciSoyisim || '')).trim() || 'Amigo');
   state.mod = 'amigo';
   state.amigo = true;
-  // Sayfa yenilemede amigo oturumu kalsın (taraftar gibi)
   oturumKaydet({ rol: 'amigo', isim: state.kullaniciIsim, soyisim: state.kullaniciSoyisim });
+  const isimKey = isimAnahtar(state.kullaniciIsim, state.kullaniciSoyisim || '');
+  state.db.ref('isimler/' + isimKey).set({ uid: state.uid, rol: 'amigo' }).catch(() => {});
   navAktifYap('canli');
   amigoEkraniGuncelle();
 }
