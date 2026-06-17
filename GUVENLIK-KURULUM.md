@@ -33,7 +33,7 @@ Realtime Database → **Rules** sekmesi
 
 ### 4. Şifreleri yenile (ifşa oldular!)
 Realtime Database → **Data** → `config` düğümü
-- `amigo_sifre` → yeni bir değer ver (eski `WC2026TR!` ifşa oldu).
+- `amigo_sifre` → yeni, güçlü bir değer ver (önceki değer paylaşıldıysa mutlaka değiştir).
 - `admin_sifre` → artık kullanılmıyor (admin Firebase Auth ile giriyor); **silebilirsin**.
 
 ### 5. Test et
